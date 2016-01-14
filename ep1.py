@@ -50,7 +50,7 @@ W1_o = np.random.normal(0., 0.5, (output_dim, N1))
 b1_o = np.random.normal(0., 0.3, (1, 1))
 
 t_ = np.linspace(0, np.pi * 2 * (num_steps/1000), num_steps, endpoint=False)
-x_ = 0.5 * np.sin(t_ / 10.) + 0.5 * np.sin(t_ * 3)
+x_ = 0.1 * np.sin(t_ / 10.) + 0.1 * np.sin(t_ * 3)
 
 h_ = np.zeros((num_steps, N1))
 y_ = np.zeros((num_steps, output_dim))
@@ -69,13 +69,10 @@ vx_ = np.zeros((num_steps, v_input_dim))
 vW_h = np.random.normal(0., 0.1, (N2, N2))
 vb_h = np.random.normal(0., 0.01, (N2, 1))
 
-vW_i = np.random.normal(0., 0.01, (N2, v_input_dim))
+vW_i = np.random.normal(0., 0.1, (N2, v_input_dim))
 
 vW_o = np.random.normal(0., 0.5, (v_output_dim, N2))
 vb_o = np.random.normal(0., 0.5, (v_output_dim, 1))
-
-vh_ = np.zeros((num_steps, N2))
-vy_ = np.zeros((num_steps, v_output_dim))
 
 vh_ = np.zeros((num_steps, N2))
 vy_ = np.zeros((num_steps, v_output_dim))
@@ -103,6 +100,7 @@ for i in xrange(num_steps):
     # update modulator
     vx = np.vstack((x, h, y))
     vh = vtau * vh + (1 - vtau) * np.tanh(np.dot(vW_h, vh) + np.dot(vW_i, vx) + vb_h)
+    # vh += (0.001 * y_[i-1])
     vh += np.random.normal(0, 0.001, vh.shape)
     # vh = np.tanh(np.dot(vW_h, vh) + np.dot(vW_i, vx) + vb_h)
     vy = np.dot(vW_o, vh) + vb_o
@@ -113,9 +111,10 @@ for i in xrange(num_steps):
     vy_[i] = vy.copy().flatten()
 
     # update base matrices
-    W1_i = vy[:W1_i.size].reshape(W1_i.shape)
-    W1_h = vy[W1_i.size:W1_i.size+W1_h.size].reshape(W1_h.shape)
-    W1_o = vy[W1_i.size+W1_h.size:W1_i.size+W1_h.size+W1_o.size].reshape(W1_o.shape)
+    lr = 0.001
+    W1_i += lr * vy[:W1_i.size].reshape(W1_i.shape)
+    W1_h += lr * vy[W1_i.size:W1_i.size+W1_h.size].reshape(W1_h.shape)
+    W1_o += lr * vy[W1_i.size+W1_h.size:W1_i.size+W1_h.size+W1_o.size].reshape(W1_o.shape)
         
     # print vy.shape
 
