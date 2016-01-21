@@ -114,7 +114,6 @@ def run(model, args):
     Wr = tf.get_variable("RNN/MultiRNNCell/Cell0/BasicRNNCell/Linear/Matrix")
     session.run(Wr.assign(Wr + 0.1))
     print "Wr", session.run(Wr)
-        
 
     allouts = []
     allstates = []
