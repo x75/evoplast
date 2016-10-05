@@ -16,3 +16,4 @@ W1_i = tf.placeholder(tf.float32, [N1, input_dim])
 
 W1_o = tf.placeholder(tf.float32, [output_dim, N1])
 b1_o = tf.placeholder(tf.float32, [output_dim, ])
+
