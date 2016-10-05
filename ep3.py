@@ -19,28 +19,65 @@ from functools import partial
 import numpy as np
 import pylab as pl
 
+from hyperopt import hp
+from hyperopt import STATUS_OK, STATUS_FAIL
+from hyperopt import fmin, tpe, Trials, rand, anneal
+# import hp_gpsmbo.hpsuggest
+from hp_gpsmbo import suggest_algos
+
 from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
 
 from smp.infth import init_jpype, ComplexityMeas
 
+
+# note to self: make easy wrapper for robotics / ML applications
+# variants: k, tau, global/local
 class ComplexityMeasure(object):
     def __init__(self):
         init_jpype()
+
+        # Predictive Information
         self.piCalcClass = JPackage("infodynamics.measures.continuous.kraskov").PredictiveInfoCalculatorKraskov
+        # self.piCalcClass = JPackage("infodynamics.measures.continuous.gaussian").PredictiveInfoCalculatorGaussian
+        # self.piCalcClass = JPackage("infodynamics.measures.continuous.kernel").PredictiveInfoCalculatorKernel
         self.piCalc = self.piCalcClass()
-        self.piCalc.setProperty("NORMALISE", "true"); # Normalise the individual var
+        self.piCalc.setProperty("NORMALISE", "false"); # Normalise the individual var
         self.tau = 1
+
+        # Active Information Storage
+        self.aisCalcClass = JPackage("infodynamics.measures.continuous.kraskov").ActiveInfoStorageCalculatorKraskov
+        self.aisCalc = self.aisCalcClass()
+        self.aisCalc.setProperty("NORMALISE", "false"); # Normalise the individual variables
+        
     # loss measure complexity
     def compute_pi(self, X):
         k = 10
-        self.piCalc.initialise(k, self.tau)        
         # self.piCalc.setObservations(X.reshape((X.shape[0],)))
         pi_avg = 0.0
-        for d in [0]: # range(X.shape[1]):
+        for d in range(X.shape[1]):
+            self.piCalc.initialise(k, self.tau)
             self.piCalc.setObservations(X[:,d])
             pi_avg += self.piCalc.computeAverageLocalOfObservations();
         return pi_avg
 
+    def compute_ais(self, X):
+        k = 10
+        ais_avg = 0.0
+        for d in range(X.shape[1]):
+            self.aisCalc.initialise(k, self.tau) # init for kraskov
+            src = X[:,d].ravel()
+            # print(src)
+            self.aisCalc.setObservations(src)
+            ais_avg_ = self.aisCalc.computeAverageLocalOfObservations()
+            # ais_local = self.aisCalc.computeLocalOfPreviousObservations()
+            # ais_id = self.aisCalc.computeLocalInfoDistanceOfPreviousObservations()
+            # k_auto = self.aisCalc.getProperty(self.aisCalcClass.K_PROP_NAME)
+            # print("active infostorage (AIS, k = %d/%s) = %f nats" % (k, k_auto, ais_avg))
+            # ais_avg_.append(ais_avg)
+            ais_avg += ais_avg_
+        return ais_avg
+
+    
 # producing network / generator / autonomous
 class Genet(object):
     def __init__(self, modelsize = 2, state_dim = 2, M = None):
@@ -68,22 +105,43 @@ def test_ind(M = None):
     if M is not None:
         M = M.copy()
     else:
-        M = np.array([[ 0.69656214,  0.33208246],
-                  [ 0.41712419,  0.56571223]])
-        M = np.array([[ 0.69656214,  0.33208246],
-                [ 0.41712419,  0.56571223]])
-        M = np.array([[ 0.69656214,  0.33208246],
-                [ 0.41712419,  0.56571223]])
-        # M = np.array([[ 0.69656214,  0.33208246],
-        #             [ 0.41712419,  0.56571223]])
-        # M = np.array([[ 0.69656214,  0.33208246],
-        #             [ 0.41712419,  0.56571223]])
-        # M = np.array([[ 0.69656214,  0.33208246],
-        #             [ 0.41712419,  0.56571223]])
-        # M = np.array([[ 0.69656214,  0.33208246],
-        #             [ 0.41712419,  0.56571223]])
-        # M = np.array([[ 0.69656214,  0.33208246],
-        #             [ 0.41712419,  0.56571223]])
+        M = [[ 0.69656214,  0.33208246],
+                  [ 0.41712419,  0.56571223]]
+        M = [[ 0.69656214,  0.33208246],
+                [ 0.41712419,  0.56571223]]
+        M = [[ 0.69656214,  0.33208246],
+                [ 0.41712419,  0.56571223]]
+        # M = [[ 0.69656214,  0.33208246],
+        #             [ 0.41712419,  0.56571223]]
+        # M = [[ 0.69656214,  0.33208246],
+        #             [ 0.41712419,  0.56571223]]
+        # M = [[ 0.69656214,  0.33208246],
+        #             [ 0.41712419,  0.56571223]]
+        # M = [[ 0.69656214,  0.33208246],
+        #             [ 0.41712419,  0.56571223]]
+        # M = [[ 0.69656214,  0.33208246],
+        #             [ 0.41712419,  0.56571223]]
+        # es vanilla PI
+        M = [[ 1.65149195, -2.1663804 ], [ 1.09012667,  0.47483937]]
+        # es vanilla PI k = 1
+        M = [[ 0.35410052,  0.36185423],  [ 1.29750725,  0.29797154]]        
+        # # cma 1234
+        # M = [[ 0.48566475,  0.71121745],  [0.35990499,  0.53510189]]
+        # # cma something else
+        # M = [[1.01299593, -0.01980717],  [0.0265115, 0.23173182]]
+        # M = [[ 2.13513734,  3.73228563], [-2.00081304,  0.40366748]]
+        # # hp tpe 1
+        # M = [[0.35360716354223576, 3.190109171204226], [0.011541858306227516, 0.95750455820040858]]
+        # # hp anneal
+        # M = [[0.10161603853231675, 1.823057896074153], [0.95762558826082311, 0.027411306108273446]]
+        # # hp gp ucb
+        # M = [[0.75581178213155242, 1.827718038969383], [0.0097885563114531102, 0.9436968783153078]]
+        # # hp gp ucb PI k = 1
+        # M_ = {'m1': 0.87536668282921848, 'm0': 0.055056894205574171, 'm3': 0.035338686184602119, 'm2': 1.0728958340419548}
+        # M = [[M_["m0"], M_["m1"]], [M_["m2"], M_["m3"]]]
+
+                
+    M = np.array(M)
         
     n = Genet(M = M)
 
@@ -95,9 +153,17 @@ def test_ind(M = None):
         # x = np.dot(M, x)
         n.step()
         Xs[i] = n.x.reshape((n.state_dim,))
+
+    cm  = ComplexityMeasure()
+    pi  = cm.compute_pi(Xs)
+    ais = cm.compute_ais(Xs)
         
     pl.subplot(311)
     pl.plot(Xs[:,0], Xs[:,1], "k-o", alpha=0.1)
+    pl.xlim((-1, 1))
+    pl.ylim((-1, 1))
+    pl.text(0, -0.5, "pi = %f nats" % pi)
+    pl.text(0, -0.75, "ais = %f nats" % ais)
     pl.gca().set_aspect(1)
     # pl.yscale("log")
     # pl.xscale("log")
@@ -107,11 +173,19 @@ def test_ind(M = None):
     pl.plot(Xs[:,1], "k-,", alpha=0.33)
     pl.show()
 
-def objective(params):
+def objective(params, hparams):
     """evaluate an individual (parameter set) with respect to given objective"""
-    numsteps = params["numsteps"]
-    n = Genet(M = params["M"])
-    cm = params["measure"]
+    # print "params", params
+    # print "hparams", hparams
+    # return np.random.uniform(0.0, 1.0)
+
+    # high-level params
+    numsteps = hparams["numsteps"]
+    cm = hparams["measure"]
+    # core params
+    # n = Genet(M = params["M"])
+    M = np.array(params[0:4]).reshape((2,2))
+    n = Genet(M = M)
     # a dict containg network config, timeseries, loss
     experiment = dict()
     #  create network
@@ -123,48 +197,130 @@ def objective(params):
         # x = np.dot(M, x)
         n.step()
         Xs[i] = n.x.reshape((n.state_dim,))
+    # pi = cm.compute_pi(Xs)
+    pi = cm.compute_ais(Xs)
+    pi = max(0, pi) + 1e-9
+    # print "pi = %f nats" % pi
+    loss = -np.log(pi)
     # return structure: params, timeseries, scalar loss
     experiment = {
+        "loss": loss, # compute_complexity(Xs)
+        "status": STATUS_OK, # compute_complexity(Xs)
         "M": n.M,
         "timeseries": Xs.copy(),
         # "loss": np.var(Xs),
-        "loss": cm.compute_pi(Xs) # compute_complexity(Xs)
     }
-    return experiment
+    if hparams["continuous"]:
+        return experiment["loss"]
+    else:
+        return experiment
 
 def main(args):
     """main, dispatch mode"""
     if args.mode == "es_vanilla":
         main_es_vanilla(args)
     elif args.mode == "cma_es":
-        main_cma_es()
+        main_cma_es(args)
     elif args.mode == "hp_tpe":
-        main_hp_tpe()
+        setattr(args, "suggest", tpe.suggest)
+        main_hp(args)
     elif args.mode == "hp_random_search":
-        main_hp_random_search()
+        setattr(args, "suggest", rand.suggest)
+        main_hp(args)
+    elif args.mode == "hp_anneal":
+        setattr(args, "suggest", anneal.suggest)
+        main_hp(args)
     elif args.mode == "hp_gp_ucb":
-        main_hp_gp_ucb()
+        setattr(args, "suggest", partial(suggest_algos.ucb, stop_at=1e-0))
+        main_hp(args)
     elif args.mode == "hp_gp_ei":
-        main_hp_gp_ei()
+        setattr(args, "suggest", partial(suggest_algos.ei, stop_at=1e-0))
+        main_hp(args)
+    elif args.mode == "test_ind":
+        test_ind()
 
 def main_cma_es(args):
     import cma
     print "args", args
-    options = {'CMA_diagonal':100, 'seed':1234, 'verb_time':0, "maxfevals": 2000}
-    func = objective # args["func"]
+    # options = {'CMA_diagonal':100, 'seed':1234, 'verb_time':0, "maxfevals": 2000}
+    # options = {'CMA_diagonal': 0, 'seed':32984, 'verb_time':0, "maxfevals": 2000}
+    options = {'CMA_diagonal': 0, 'seed':4534985, 'verb_time':0, "maxfevals": 4000}
+
+    hparams = {
+        "numsteps": args.numsteps,
+        "measure": ComplexityMeasure(),
+        "continuous": True,
+    }
+    pobjective = partial(objective, hparams=hparams)
+
+    # func = objective # args["func"]
     # arguments: function, initial params, initial var, options
     # res = cma.fmin(cma.fcts.griewank, [0.1] * 10, 0.5, options)
-    res = cma.fmin(func, [0.5] * args["dim"], 0.3, options)
+    res = cma.fmin(pobjective, [0.5] * 4, 0.3, options)
 
-    print res[0], res[1]
+    print "result cma_es", res[0], res[1]
     return res[0]
+
+def main_hp(args):
+      
+    hparams = {
+        "numsteps": args.numsteps,
+        "measure": ComplexityMeasure(),
+        "continuous": False,
+    }
+    pobjective = partial(objective, hparams=hparams)
+
+    print pobjective(params = np.random.uniform(-1.0, 1.0, (2,2)))
     
+    def objective_hp(params):
+        # print "params", params
+        targ = np.array(params) # .astype(np.float32)
+        # print targ.dtype
+        now = time.time()
+        func = pobjective # args["func"]
+        ret = func(targ) # cma.fcts.griewank(targ)
+        took = time.time() - now
+        print "feval took %f s with ret = %s" % (took, ret["loss"])
+        return ret
+
+    space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(4)]
+
+    trials = Trials()
+    suggest = tpe.suggest # something
+    bests = []
+    initevals = 0
+    maxevals = 2000
+    lrstate = np.random.RandomState(123)
+    
+    for i in range(initevals, maxevals):
+        print "fmin iter %d" % i,
+        bests.append(fmin(objective_hp,
+                    space,
+                    algo=suggest,
+                    max_evals=i+1,
+                    rstate=lrstate, # 1, 10, 123, 
+                    trials=trials,
+                    verbose=1))
+        lrstate = np.random.RandomState()
+
+    best = bests[-1]
+    print("best", best)
+    
+    # for k,v in best:
+    pkeys = best.keys()
+    pkeys.sort()
+    ret = np.zeros((len(pkeys)))
+    for i,k in enumerate(pkeys):
+        # print k
+        ret[i] = best[k]
+        
+    return ret
     
 def main_es_vanilla(args):
     # experiment signature
     expsig = time.strftime("%Y%m%d-%H%M%S")
     # evolution / opt params
-    numgenerations = 200
+    numgenerations = 100
     numpopulation = 20
     numsteps = 1000
 
@@ -184,14 +340,23 @@ def main_es_vanilla(args):
     for k in range(numgenerations):
         # arrays of individuals each element of which is
         population = dict()
+
+        hparams = {
+            "numsteps": numsteps,
+            "measure": cm,
+            "continuous": False,
+        }
+        pobjective = partial(objective, hparams=hparams)
+        
+        
         # loop over population
         for j in range(numpopulation):
-            params = {
-                "M": newgen[j],
-                "numsteps": numsteps,
-                "measure": cm
-                }
-            experiment = objective(params)
+            # params = {
+            #     "M": newgen[j],
+            # }
+            params = newgen[j].tolist()
+            # experiment = objective(params, hparams)
+            experiment = pobjective(params)
             # population.append(experiment)
             population["%d" % j] = experiment
 
@@ -232,7 +397,10 @@ def main_es_vanilla(args):
         # print generations[-1].items()
         # x = {1: 2, 3: 4, 4: 3, 2: 1, 0: 0}
         # sorted_x = sorted(generations[-1].items(), key=operator.itemgetter(1))
-        sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
+        # for maximization
+        # sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
+        # for minimization of neg loss
+        sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
 
         # print sorted_x[0][1]
         newgen[0] = sorted_x[0][1]["M"]
@@ -245,7 +413,9 @@ def main_es_vanilla(args):
                 # print "mut_idx", mut_idx
                 tmp_s = newgen[i].shape
                 tmp = newgen[i].flatten()
-                tmp[mut_idx] += np.random.normal(0, 0.1)
+                # tmp[mut_idx] += np.random.normal(0, 0.1)
+                n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.1
+                tmp[mut_idx] += n
                 newgen[i] = tmp.copy().reshape(tmp_s)
                 
             # # crossover
