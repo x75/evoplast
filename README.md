@@ -1,5 +1,7 @@
 # evoplast
 
+2015, 2016 Oswald Berthold
+
 My branch of experimental work related to **evolution** and **plasticity**.
 
 In Nature there is strong interaction between evolutionary and individual adaptation. In artificial evolution this interaction has only been given limited attention but offers huge potential. This project is a collection of my experiments in this direction.
