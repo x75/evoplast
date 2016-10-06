@@ -4,6 +4,8 @@
 
 
 # TODO
+#  - complete logging
+#  - sample and plot catalogue of phylogenetic history
 #  - different esstimators: kernel, kraskov, ...
 #  - different measures: TE / AIS / literature
 #  - ES / CMA-ES / hyperopt
