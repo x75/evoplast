@@ -6,8 +6,9 @@
 # TODO
 #  - different esstimators: kernel, kraskov, ...
 #  - different measures: TE / AIS / literature
-#  - ES / HyperNeat / CMA-ES / hyperopt
-#  - 
+#  - ES / CMA-ES / hyperopt
+#  - CPPN, HyperNeat and Map syn/mod composite network
+#  - ES: compare fitness/generation curves for gaussian and pareto noise
 
 # FIXME:
 #  1 - check base network dynamics
@@ -54,14 +55,31 @@ class ComplexityMeasure(object):
         k = 10
         # self.piCalc.setObservations(X.reshape((X.shape[0],)))
         pi_avg = 0.0
+        # FIXME: make that a joint PI
         for d in range(X.shape[1]):
             self.piCalc.initialise(k, self.tau)
             self.piCalc.setObservations(X[:,d])
             pi_avg += self.piCalc.computeAverageLocalOfObservations();
         return pi_avg
+    
+    def compute_pi_local(self, X):
+        k = 1
+        winsize = 100
+        # self.piCalc.setObservations(X.reshape((X.shape[0],)))
+        pi_avg = 0.0
+        for d in range(X.shape[1]):
+            for i in range(winsize, X.shape[0], 10):
+                self.piCalc.initialise(k, self.tau)
+                # print "X[i:i+winsize,d]", X[i-winsize:i,d].shape
+                self.piCalc.setObservations(X[i-winsize:i,d])
+                # pi_local = self.piCalc.computeLocalOfPreviousObservations()
+                pi_avg += self.piCalc.computeAverageLocalOfObservations();
+                # print "pi_local", np.sum(pi_local)
+                # pi_avg += np.sum(pi_local)
+        return pi_avg
 
     def compute_ais(self, X):
-        k = 10
+        k = 100
         ais_avg = 0.0
         for d in range(X.shape[1]):
             self.aisCalc.initialise(k, self.tau) # init for kraskov
@@ -124,7 +142,9 @@ def test_ind(M = None):
         # es vanilla PI
         M = [[ 1.65149195, -2.1663804 ], [ 1.09012667,  0.47483937]]
         # es vanilla PI k = 1
-        M = [[ 0.35410052,  0.36185423],  [ 1.29750725,  0.29797154]]        
+        M = [[ 0.35410052,  0.36185423],  [ 1.29750725,  0.29797154]]
+        # es vanilla AIS k = 10
+        M = [[ 0.15237389, -7.50620661],  [ 0.47059135,  0.72873167]]
         # # cma 1234
         # M = [[ 0.48566475,  0.71121745],  [0.35990499,  0.53510189]]
         # # cma something else
@@ -138,8 +158,11 @@ def test_ind(M = None):
         # M = [[0.75581178213155242, 1.827718038969383], [0.0097885563114531102, 0.9436968783153078]]
         # # hp gp ucb PI k = 1
         # M_ = {'m1': 0.87536668282921848, 'm0': 0.055056894205574171, 'm3': 0.035338686184602119, 'm2': 1.0728958340419548}
+        # hp_tpe with pi_local winsize 100 step 10 k 10
+        # M_ = {'m1': 1.6493649280464324, 'm0': 0.71606638231926245, 'm3': 0.95933124164464356, 'm2': 0.013195138595586221}
+        # # hp_tpe with PI?/AIS?
+        # M_ = {'m1': 3.2898452455662013, 'm0': 0.14581152780579029, 'm3': 0.89520067809917869, 'm2': 0.031551465743829638}
         # M = [[M_["m0"], M_["m1"]], [M_["m2"], M_["m3"]]]
-
                 
     M = np.array(M)
         
@@ -156,7 +179,8 @@ def test_ind(M = None):
 
     cm  = ComplexityMeasure()
     pi  = cm.compute_pi(Xs)
-    ais = cm.compute_ais(Xs)
+    ais  = cm.compute_ais(Xs)
+    pi_l  = cm.compute_pi_local(Xs)
         
     pl.subplot(311)
     pl.plot(Xs[:,0], Xs[:,1], "k-o", alpha=0.1)
@@ -199,9 +223,11 @@ def objective(params, hparams):
         Xs[i] = n.x.reshape((n.state_dim,))
     # pi = cm.compute_pi(Xs)
     pi = cm.compute_ais(Xs)
+    # pi = cm.compute_pi_local(Xs)
     pi = max(0, pi) + 1e-9
     # print "pi = %f nats" % pi
-    loss = -np.log(pi)
+    # loss = -np.log(pi)
+    loss = -pi
     # return structure: params, timeseries, scalar loss
     experiment = {
         "loss": loss, # compute_complexity(Xs)
@@ -289,7 +315,7 @@ def main_hp(args):
     suggest = tpe.suggest # something
     bests = []
     initevals = 0
-    maxevals = 2000
+    maxevals = 500
     lrstate = np.random.RandomState(123)
     
     for i in range(initevals, maxevals):
@@ -304,7 +330,8 @@ def main_hp(args):
         lrstate = np.random.RandomState()
 
     best = bests[-1]
-    print("best", best)
+    for i in range(5):
+        print("best[%d]" % (-1-i), bests[-1-i])
     
     # for k,v in best:
     pkeys = best.keys()
@@ -320,7 +347,7 @@ def main_es_vanilla(args):
     # experiment signature
     expsig = time.strftime("%Y%m%d-%H%M%S")
     # evolution / opt params
-    numgenerations = 100
+    numgenerations = 50
     numpopulation = 20
     numsteps = 1000
 
@@ -414,7 +441,7 @@ def main_es_vanilla(args):
                 tmp_s = newgen[i].shape
                 tmp = newgen[i].flatten()
                 # tmp[mut_idx] += np.random.normal(0, 0.1)
-                n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.1
+                n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
                 newgen[i] = tmp.copy().reshape(tmp_s)
                 
