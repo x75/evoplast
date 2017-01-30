@@ -391,7 +391,7 @@ def main_es_vanilla(args):
     # experiment signature
     expsig = time.strftime("%Y%m%d-%H%M%S")
     # evolution / opt params
-    numgenerations = 30
+    numgenerations = 50
     numpopulation = 20
     numsteps = 1000
 
@@ -509,7 +509,7 @@ def main_es_vanilla(args):
         # print "sorted_x", sorted_x
         
     # print "generations", generations[-1]
-    sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
+    sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
     # for ind in generations[-1].values():
     for i,ind in enumerate(sorted_x):
         if i < 5:
