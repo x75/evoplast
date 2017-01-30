@@ -2,7 +2,6 @@
 # create simple (few neurons) recurrent neural networks and evolve / optimize
 # their weights towards a "complexity" objective: ES, CMA-ES, hyperopt
 
-
 # TODO
 #  - complete logging
 #  - sample and plot catalogue of phylogenetic history
@@ -30,8 +29,9 @@ from hp_gpsmbo import suggest_algos
 
 from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
 
-from smp.infth import init_jpype, ComplexityMeas
+from smp.infth import init_jpype # , ComplexityMeas
 
+from ep4 import Genet, GenetPlast
 
 # note to self: make easy wrapper for robotics / ML applications
 # variants: k, tau, global/local
@@ -97,30 +97,6 @@ class ComplexityMeasure(object):
             ais_avg += ais_avg_
         return ais_avg
 
-    
-# producing network / generator / autonomous
-class Genet(object):
-    def __init__(self, modelsize = 2, state_dim = 2, M = None):
-        self.modelsize = modelsize
-        self.state_dim = state_dim
-        # network state update
-        if M is not None:
-            self.M = M.copy()
-        else:
-            self.M = np.random.uniform(-1e-1, 1e-1, (modelsize, modelsize)) * 5.0
-        # network state
-        self.x = np.random.uniform(-1e-2, 1e-2, (self.M.shape[0], 1))
-        # transfer func
-        self.nonlin = np.tanh
-
-        # leak factor
-        self.leak = 0.5
-
-    def step(self):
-        self.x = self.leak * self.x + (1 - self.leak) * (np.dot(self.M, self.x))
-        self.x = self.nonlin(self.x) + np.random.normal(0, 1e-3, self.x.shape)
-        # print self.x.shape
-
 def test_ind(M = None):
     if M is not None:
         M = M.copy()
@@ -168,24 +144,32 @@ def test_ind(M = None):
                 
     M = np.array(M)
         
-    n = Genet(M = M)
+    # n = Genet(M = M)
+    n = GenetPlast(M = M)
 
     numsteps = 2000
+
+    # log_dim = n.state_dim
+    log_dim = n.state_dim + n.networks["slow"]["s_dim"]
         
-    Xs = np.zeros((numsteps, n.state_dim))
+    Xs = np.zeros((numsteps, log_dim))
     # loop over timesteps
     for i in range(numsteps):
         # x = np.dot(M, x)
         n.step()
-        Xs[i] = n.x.reshape((n.state_dim,))
+        # Xs[i] = n.x.reshape((n.state_dim,))
+        Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+        Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
+    # pi = cm.compute_pi(Xs)
+    Xs_meas = Xs[:,[1,2]]
 
     cm  = ComplexityMeasure()
-    pi  = cm.compute_pi(Xs)
-    ais  = cm.compute_ais(Xs)
-    pi_l  = cm.compute_pi_local(Xs)
+    pi  = cm.compute_pi(Xs_meas)
+    ais  = cm.compute_ais(Xs_meas)
+    pi_l  = cm.compute_pi_local(Xs_meas)
         
     pl.subplot(311)
-    pl.plot(Xs[:,0], Xs[:,1], "k-o", alpha=0.1)
+    pl.plot(Xs[:,1], Xs[:,2], "k-o", alpha=0.1)
     pl.xlim((-1, 1))
     pl.ylim((-1, 1))
     pl.text(0, -0.5, "pi = %f nats" % pi)
@@ -194,9 +178,9 @@ def test_ind(M = None):
     # pl.yscale("log")
     # pl.xscale("log")
     pl.subplot(312)
-    pl.plot(Xs[:,0], "k-,", alpha=0.33)
-    pl.subplot(313)
     pl.plot(Xs[:,1], "k-,", alpha=0.33)
+    pl.subplot(313)
+    pl.plot(Xs[:,2], "k-,", alpha=0.33)
     pl.show()
 
 def objective(params, hparams):
@@ -235,6 +219,60 @@ def objective(params, hparams):
         "loss": loss, # compute_complexity(Xs)
         "status": STATUS_OK, # compute_complexity(Xs)
         "M": n.M,
+        "timeseries": Xs.copy(),
+        # "loss": np.var(Xs),
+    }
+    if hparams["continuous"]:
+        return experiment["loss"]
+    else:
+        return experiment
+
+def objective_double(params, hparams):
+    """evaluate an individual (parameter set) with respect to given objective"""
+    # print "params", params
+    # print "hparams", hparams
+    # return np.random.uniform(0.0, 1.0)
+
+    # high-level params
+    numsteps = hparams["numsteps"]
+    cm = hparams["measure"]
+    # core params
+    # n = Genet(M = params["M"])
+    # print "params[0:24]", params[0:24]
+    M = np.array(params).reshape((9,12))
+    n = GenetPlast(M = M)
+    # a dict containg network config, timeseries, loss
+    experiment = dict()
+    #  create network
+    # n = Genet(2, 2)
+
+    # log_dim = n.state_dim
+    log_dim = n.state_dim + n.networks["slow"]["s_dim"]
+        
+    # state trajectory
+    Xs = np.zeros((numsteps, log_dim))
+    
+    # loop over timesteps
+    for i in range(numsteps):
+        # x = np.dot(M, x)
+        n.step()
+        # Xs[i] = n.x.reshape((log_dim,))
+        Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+        Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
+    # pi = cm.compute_pi(Xs)
+    Xs_meas = Xs[:,[1,2]]
+    
+    pi = cm.compute_ais(Xs_meas)
+    # pi = cm.compute_pi_local(Xs)
+    pi = max(0, pi) + 1e-9
+    # print "pi = %f nats" % pi
+    # loss = -np.log(pi)
+    loss = -pi
+    # return structure: params, timeseries, scalar loss
+    experiment = {
+        "loss": loss, # compute_complexity(Xs)
+        "status": STATUS_OK, # compute_complexity(Xs)
+        "M": n.networks["slow"]["M"], # n.M
         "timeseries": Xs.copy(),
         # "loss": np.var(Xs),
     }
@@ -349,7 +387,7 @@ def main_es_vanilla(args):
     # experiment signature
     expsig = time.strftime("%Y%m%d-%H%M%S")
     # evolution / opt params
-    numgenerations = 50
+    numgenerations = 30
     numpopulation = 20
     numsteps = 1000
 
@@ -361,8 +399,10 @@ def main_es_vanilla(args):
     # array of parameter ndarray for the current generation
     newgen = []
     for j in range(numpopulation):
-        n = Genet(2, 2)
-        newgen.append(n.M)
+        # n = Genet(2, 2)
+        # newgen.append(n.M)
+        n = GenetPlast(2, 2)
+        newgen.append(n.networks["slow"]["M"])
     
     pl.ion()
     # loop over generations
@@ -375,22 +415,27 @@ def main_es_vanilla(args):
             "measure": cm,
             "continuous": False,
         }
-        pobjective = partial(objective, hparams=hparams)
-        
+        # pobjective = partial(objective, hparams=hparams)
+        pobjective = partial(objective_double, hparams=hparams)
         
         # loop over population
         for j in range(numpopulation):
             # params = {
             #     "M": newgen[j],
             # }
+
+            # get parameters
+            # print "newgen[j]", newgen[j].shape
             params = newgen[j].tolist()
+
+            # evaluate individual
             # experiment = objective(params, hparams)
             experiment = pobjective(params)
+
+            # store results for indidividual
             # population.append(experiment)
             population["%d" % j] = experiment
 
-            # print "M", n.M
-            
             # pl.subplot(411)
             # pl.plot(Xs[:,0], Xs[:,1], "k-o", alpha=0.1)
             # pl.gca().set_aspect(1)
@@ -434,10 +479,10 @@ def main_es_vanilla(args):
         # print sorted_x[0][1]
         newgen[0] = sorted_x[0][1]["M"]
         for i in range(1, numpopulation):
-            c = np.random.choice(10)# make tournament or something
+            c = np.random.choice(15)# make tournament or something
             newgen[i] = sorted_x[c][1]["M"]
             # mutate
-            if np.random.uniform() < 0.05:
+            if np.random.uniform() < 0.1: # 05:
                 mut_idx = np.random.choice(np.prod(newgen[i].shape))
                 # print "mut_idx", mut_idx
                 tmp_s = newgen[i].shape
@@ -445,6 +490,7 @@ def main_es_vanilla(args):
                 # tmp[mut_idx] += np.random.normal(0, 0.1)
                 n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
+                print "n", n, tmp[mut_idx]
                 newgen[i] = tmp.copy().reshape(tmp_s)
                 
             # # crossover
