@@ -14,7 +14,10 @@
 # FIXME:
 #  1 - check base network dynamics
 #  2 - average over multiple runs per individual
+#  3 - ensure diversity
 #  found error: newgen wasn't properly used but overwritten by random configuration
+
+from __future__ import print_function
 
 import cPickle, time, argparse
 from functools import partial
@@ -54,7 +57,7 @@ class ComplexityMeasure(object):
         
     # loss measure complexity
     def compute_pi(self, X):
-        k = 200
+        k = 100
         # self.piCalc.setObservations(X.reshape((X.shape[0],)))
         pi_avg = 0.0
         # FIXME: make that a joint PI
@@ -72,11 +75,11 @@ class ComplexityMeasure(object):
         for d in range(X.shape[1]):
             for i in range(winsize, X.shape[0], 10):
                 self.piCalc.initialise(k, self.tau)
-                # print "X[i:i+winsize,d]", X[i-winsize:i,d].shape
+                # print("X[i:i+winsize,d]", X[i-winsize:i,d].shape)
                 self.piCalc.setObservations(X[i-winsize:i,d])
                 # pi_local = self.piCalc.computeLocalOfPreviousObservations()
                 pi_avg += self.piCalc.computeAverageLocalOfObservations();
-                # print "pi_local", np.sum(pi_local)
+                # print("pi_local", np.sum(pi_local))
                 # pi_avg += np.sum(pi_local)
         return pi_avg
 
@@ -189,8 +192,8 @@ def test_ind(M = None):
 
 def objective(params, hparams):
     """evaluate an individual (parameter set) with respect to given objective"""
-    # print "params", params
-    # print "hparams", hparams
+    # print("params", params)
+    # print("hparams", hparams)
     # return np.random.uniform(0.0, 1.0)
 
     # high-level params
@@ -215,7 +218,7 @@ def objective(params, hparams):
     pi = cm.compute_ais(Xs)
     # pi = cm.compute_pi_local(Xs)
     pi = max(0, pi) + 1e-9
-    # print "pi = %f nats" % pi
+    # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
     loss = -pi
     # return structure: params, timeseries, scalar loss
@@ -233,8 +236,8 @@ def objective(params, hparams):
 
 def objective_double(params, hparams):
     """evaluate an individual (parameter set) with respect to given objective"""
-    # print "params", params
-    # print "hparams", hparams
+    # print("params", params)
+    # print("hparams", hparams)
     # return np.random.uniform(0.0, 1.0)
 
     # high-level params
@@ -242,7 +245,7 @@ def objective_double(params, hparams):
     cm = hparams["measure"]
     # core params
     # n = Genet(M = params["M"])
-    # print "params[0:24]", params[0:24]
+    # print("params[0:24]", params[0:24])
     M = np.array(params).reshape((9,12))
     n = GenetPlast(M = M)
     # a dict containg network config, timeseries, loss
@@ -269,7 +272,7 @@ def objective_double(params, hparams):
     # pi = cm.compute_ais(Xs_meas)
     # pi = cm.compute_pi_local(Xs)
     pi = max(0, pi) + 1e-9
-    # print "pi = %f nats" % pi
+    # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
     loss = -pi
     # return structure: params, timeseries, scalar loss
@@ -311,7 +314,7 @@ def main(args):
 
 def main_cma_es(args):
     import cma
-    print "args", args
+    print("args", args)
     # options = {'CMA_diagonal':100, 'seed':1234, 'verb_time':0, "maxfevals": 2000}
     # options = {'CMA_diagonal': 0, 'seed':32984, 'verb_time':0, "maxfevals": 2000}
     options = {'CMA_diagonal': 0, 'seed':4534985, 'verb_time':0, "maxfevals": 4000}
@@ -328,7 +331,7 @@ def main_cma_es(args):
     # res = cma.fmin(cma.fcts.griewank, [0.1] * 10, 0.5, options)
     res = cma.fmin(pobjective, [0.5] * 4, 0.3, options)
 
-    print "result cma_es", res[0], res[1]
+    print("result cma_es", res[0], res[1])
     return res[0]
 
 def main_hp(args):
@@ -340,17 +343,17 @@ def main_hp(args):
     }
     pobjective = partial(objective, hparams=hparams)
 
-    print pobjective(params = np.random.uniform(-1.0, 1.0, (2,2)))
+    print(pobjective(params = np.random.uniform(-1.0, 1.0, (2,2))))
     
     def objective_hp(params):
-        # print "params", params
+        # print("params", params)
         targ = np.array(params) # .astype(np.float32)
-        # print targ.dtype
+        # print(targ.dtype)
         now = time.time()
         func = pobjective # args["func"]
         ret = func(targ) # cma.fcts.griewank(targ)
         took = time.time() - now
-        print "feval took %f s with ret = %s" % (took, ret["loss"])
+        print("feval took %f s with ret = %s" % (took, ret["loss"]))
         return ret
 
     space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(4)]
@@ -363,7 +366,7 @@ def main_hp(args):
     lrstate = np.random.RandomState(123)
     
     for i in range(initevals, maxevals):
-        print "fmin iter %d" % i,
+        print("fmin iter %d" % i,)
         bests.append(fmin(objective_hp,
                     space,
                     algo=suggest,
@@ -382,7 +385,7 @@ def main_hp(args):
     pkeys.sort()
     ret = np.zeros((len(pkeys)))
     for i,k in enumerate(pkeys):
-        # print k
+        # print(k)
         ret[i] = best[k]
         
     return ret
@@ -429,7 +432,7 @@ def main_es_vanilla(args):
             # }
 
             # get parameters
-            # print "newgen[j]", newgen[j].shape
+            # print("newgen[j]", newgen[j].shape)
             params = newgen[j].tolist()
 
             # evaluate individual
@@ -462,7 +465,7 @@ def main_es_vanilla(args):
         std_fit = np.std(ind_loss)
         max_fit = np.max(ind_loss)
         min_fit = np.min(ind_loss)
-        print "gen %04d: max fit = %f, avg/std fit = %f/%f, min fit = %f, " % (k, max_fit, avg_fit, std_fit, min_fit)
+        print("gen %04d: max fit = %f, avg/std fit = %f/%f, min fit = %f, " % (k, max_fit, avg_fit, std_fit, min_fit))
 
         generations.append(population)
 
@@ -472,7 +475,7 @@ def main_es_vanilla(args):
         # generate new generation from loss sorted current generation
         # get best n individuals (FIXME: use a dataframe)
         # import operator
-        # print generations[-1].items()
+        # print(generations[-1].items())
         # x = {1: 2, 3: 4, 4: 3, 2: 1, 0: 0}
         # sorted_x = sorted(generations[-1].items(), key=operator.itemgetter(1))
         # for maximization
@@ -480,7 +483,7 @@ def main_es_vanilla(args):
         # for minimization of neg loss
         sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
 
-        # print sorted_x[0][1]
+        # print(sorted_x[0][1])
         newgen[0] = sorted_x[0][1]["M"]
         for i in range(1, numpopulation):
             c = np.random.choice(15)# make tournament or something
@@ -488,33 +491,33 @@ def main_es_vanilla(args):
             # mutate
             if np.random.uniform() < 0.1: # 05:
                 mut_idx = np.random.choice(np.prod(newgen[i].shape))
-                # print "mut_idx", mut_idx
+                # print("mut_idx", mut_idx)
                 tmp_s = newgen[i].shape
                 tmp = newgen[i].flatten()
                 # tmp[mut_idx] += np.random.normal(0, 0.1)
                 n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
-                print "n", n, tmp[mut_idx]
+                print("n", n, tmp[mut_idx])
                 newgen[i] = tmp.copy().reshape(tmp_s)
                 
             # # crossover
             # if np.random.uniform() < 0.01:
             #     mut_idx = np.random.choice(np.prod(newgen[i].shape))
-            #     print "mut_idx", mut_idx
+            #     print("mut_idx", mut_idx)
             #     tmp_s = newgen[i].shape
             #     tmp = newgen[i].flatten()
             #     tmp[mut_idx] += np.random.normal(0, 0.05)
             #     newgen[i] = tmp.reshape(tmp_s)
                 
-        # print "sorted_x", sorted_x
+        # print("sorted_x", sorted_x)
         
-    # print "generations", generations[-1]
+    # print("generations", generations[-1])
     sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
     # for ind in generations[-1].values():
     for i,ind in enumerate(sorted_x):
         if i < 5:
             test_ind(ind[1]["M"])
-        print "last generation fit/M", ind[1]["loss"], ind[1]["M"]
+        print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
     pl.ioff()
     pl.show()
 
