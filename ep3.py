@@ -31,7 +31,7 @@ from hyperopt import fmin, tpe, Trials, rand, anneal
 # import hp_gpsmbo.hpsuggest
 try:
     from hp_gpsmbo import suggest_algos
-except ImportError, e:
+except ImportError:
     print("Couldn't import hp_gpsmbo, %s" % e)
 
 from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
