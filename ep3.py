@@ -43,6 +43,14 @@ from ep4 import Genet, GenetPlast
 
 # note to self: make easy wrapper for robotics / ML applications
 # variants: k, tau, global/local
+
+# from lmjohns3:kohonen/kohonen/kohonen.py
+def argsample(pdf, n=1):
+    '''Return n indices drawn proportionally from a discrete mass vector.'''
+    assert (pdf >= 0).all(), 'cannot sample from %r!' % pdf
+    cdf = pdf.cumsum()
+    return np.searchsorted(cdf, np.random.uniform(0, cdf[-1], n))
+
 class ComplexityMeasure(object):
     def __init__(self, measure="PI", measure_k = 100, measure_tau = 1):
 
@@ -160,6 +168,25 @@ def test_ind(args, M = None, fig = None, axes = None):
         # M_ = {'m1': 3.2898452455662013, 'm0': 0.14581152780579029, 'm3': 0.89520067809917869, 'm2': 0.031551465743829638}
         # M = [[M_["m0"], M_["m1"]], [M_["m2"], M_["m3"]]]
 
+        # cma_es 20170131 slow M
+ #        M = [-0.7514154 , -2.7365132 ,  2.61213931 ,-1.84910997 ,-0.66426485 , 2.08347174 -1.09825155 , 0.93310625 ,-1.65316607 , 1.16035822 , 0.24026319 , 0.59995612 
+ # -0.41730344 , 7.79230665 ,-1.49233779 ,-1.58248257 , 3.6782291 , -2.89003224
+ #  4.328539 ,   2.43253161 , 0.4810217 , -4.14685984 ,-4.90913503 , 0.93255625
+ # -1.30142747 , 0.55256147 ,-0.55657707 , 0.57766382 , 1.81523245 , 6.89785479
+ # -2.6975135 ,  6.14064481 , 1.93846706 ,-3.99651144 , 7.95055961 , 2.4293328
+ #  1.52976672 , 1.57255522 ,-4.76556823 ,-2.45029775 , 4.4360247 ,  3.30405072
+ #  0.42359173 ,-3.98507505 , 3.95753928 ,-5.56014638 , 5.54858053 , 3.48650422
+ #  1.31697852 ,-3.85565617 , 3.83840935 , 3.18590168 , 0.18725208 ,-1.56320902
+ # -0.69730546 ,-3.79129495 , 3.15212612 ,-0.75024253 , 4.92589775 ,-1.85079826
+ #  7.69352833 , 4.53011577 ,-4.34926963 ,-0.17240608 ,-0.57012001 , 3.09799469
+ #  0.36284337 ,-3.19599932 , 4.29777014 ,-3.0896056 ,  4.28426481 ,-2.12271555
+ #  2.28169805 , 5.81709017 , 2.46634369 ,-3.83153241 ,-1.57012585 ,-1.72009192
+ # -0.36671533 , 0.88318839 , 4.36377448 , 2.1980125 , -4.08149107 , 0.39740616
+ # -5.3072653 ,  5.37462117 , 6.25147611 , 5.48232004 ,-9.12562418 , 1.45251352
+ # -1.67627735 ,-5.21085258 ,-0.99722649 ,-0.42665154 , 2.80383282 ,-0.87153398
+ # -4.27882815 ,-3.78795119 , 7.04832173 ,-3.15230275 , 2.80892391 ,-2.37740598
+ #  5.55134174 ,-2.4525543 ,  4.17792407 , 0.24796831 , 4.93469566 , 5.60239347]
+        
         # es vanilla
         M = [[ 0.56363375, -0.19903545],  [-0.3386425,   0.86326516]]
         
@@ -637,22 +664,35 @@ def main_es_vanilla(args):
         # for minimization of neg loss
         sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
 
+        fitprobs = []
+        for idx, ind in sorted_x:
+            # print("idx", idx, "ind", ind)
+            fitprobs.append(ind["loss"])
+        fitprobs = np.sqrt(np.abs(np.array(fitprobs)))
+        fitprobs /= np.sum(fitprobs)
+        # print("fitprobs", np.abs(fitprobs))
+
+        # print("sample fitprobs", argsample(fitprobs))
+                    
+        # print("sorted_x", sorted_x[:]["loss"])
         # print(sorted_x[0][1])
         newgen[0] = sorted_x[0][1]["M"]
         for i in range(1, numpopulation):
             # select
             # 1: sample weighted by fitness
+            c = argsample(fitprobs)[0]
             # 2: sample weighted by fitness rank
-            c = np.random.choice(15)# make tournament or something
+            # 3: naive uniform sampling
+            # c = np.random.choice(min(numpopulation, 15))# make tournament or something
             newgen[i] = sorted_x[c][1]["M"]
             # mutate
-            if np.random.uniform() < 0.1: # 05:
+            if np.random.uniform() < 0.3: # 05:
                 mut_idx = np.random.choice(np.prod(newgen[i].shape))
                 # print("mut_idx", mut_idx)
                 tmp_s = newgen[i].shape
                 tmp = newgen[i].flatten()
-                # tmp[mut_idx] += np.random.normal(0, 0.1)
-                n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
+                n = np.random.normal(0, 0.1)
+                # n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
                 # print("n", n, tmp[mut_idx])
                 newgen[i] = tmp.copy().reshape(tmp_s)
