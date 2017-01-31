@@ -3,7 +3,7 @@
 # their weights towards a "complexity" objective: ES, CMA-ES, hyperopt
 
 # TODO
-#  - complete logging
+#  - complete logging + storage of experiment
 #  - sample and plot catalogue of phylogenetic history
 #  - different esstimators: kernel, kraskov, ...
 #  - different measures: TE / AIS / literature
@@ -32,7 +32,7 @@ from hyperopt import fmin, tpe, Trials, rand, anneal
 try:
     from hp_gpsmbo import suggest_algos
 except ImportError:
-    print("Couldn't import hp_gpsmbo, %s" % e)
+    print("Couldn't import hp_gpsmbo")
 
 from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
 
@@ -43,42 +43,50 @@ from ep4 import Genet, GenetPlast
 # note to self: make easy wrapper for robotics / ML applications
 # variants: k, tau, global/local
 class ComplexityMeasure(object):
-    def __init__(self):
+    def __init__(self, measure="PI", measure_k = 100, measure_tau = 1):
         init_jpype()
 
+        self.measure = measure
+        self.k   = measure_k
+        self.tau = measure_tau
+        
         # Predictive Information
         self.piCalcClass = JPackage("infodynamics.measures.continuous.kraskov").PredictiveInfoCalculatorKraskov
         # self.piCalcClass = JPackage("infodynamics.measures.continuous.gaussian").PredictiveInfoCalculatorGaussian
         # self.piCalcClass = JPackage("infodynamics.measures.continuous.kernel").PredictiveInfoCalculatorKernel
         self.piCalc = self.piCalcClass()
         self.piCalc.setProperty("NORMALISE", "false"); # Normalise the individual var
-        self.tau = 1
 
         # Active Information Storage
         self.aisCalcClass = JPackage("infodynamics.measures.continuous.kraskov").ActiveInfoStorageCalculatorKraskov
         self.aisCalc = self.aisCalcClass()
         self.aisCalc.setProperty("NORMALISE", "false"); # Normalise the individual variables
-        
+
+        if self.measure == "PI":
+            self.compute = self.compute_pi
+        elif self.measure == "lPI":
+            self.compute = self.compute_pi_local
+        elif self.measure == "AIS":
+            self.compute = self.compute_ais
+                
     # loss measure complexity
     def compute_pi(self, X):
-        k = 100
         # self.piCalc.setObservations(X.reshape((X.shape[0],)))
         pi_avg = 0.0
         # FIXME: make that a joint PI
         for d in range(X.shape[1]):
-            self.piCalc.initialise(k, self.tau)
+            self.piCalc.initialise(self.k, self.tau)
             self.piCalc.setObservations(X[:,d])
             pi_avg += self.piCalc.computeAverageLocalOfObservations();
         return pi_avg
     
     def compute_pi_local(self, X):
-        k = 1
         winsize = 100
         # self.piCalc.setObservations(X.reshape((X.shape[0],)))
         pi_avg = 0.0
         for d in range(X.shape[1]):
             for i in range(winsize, X.shape[0], 10):
-                self.piCalc.initialise(k, self.tau)
+                self.piCalc.initialise(self.k, self.tau)
                 # print("X[i:i+winsize,d]", X[i-winsize:i,d].shape)
                 self.piCalc.setObservations(X[i-winsize:i,d])
                 # pi_local = self.piCalc.computeLocalOfPreviousObservations()
@@ -88,10 +96,9 @@ class ComplexityMeasure(object):
         return pi_avg
 
     def compute_ais(self, X):
-        k = 100
         ais_avg = 0.0
         for d in range(X.shape[1]):
-            self.aisCalc.initialise(k, self.tau) # init for kraskov
+            self.aisCalc.initialise(self.k, self.tau) # init for kraskov
             src = X[:,d].ravel()
             # print(src)
             self.aisCalc.setObservations(src)
@@ -218,9 +225,12 @@ def objective(params, hparams):
         # x = np.dot(M, x)
         n.step()
         Xs[i] = n.x.reshape((n.state_dim,))
+        Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+    Xs_meas = Xs[:,[1,2]]
     # pi = cm.compute_pi(Xs)
-    pi = cm.compute_ais(Xs)
+    # pi = cm.compute_ais(Xs)
     # pi = cm.compute_pi_local(Xs)
+    pi = cm.compute(Xs_meas)
     pi = max(0, pi) + 1e-9
     # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
@@ -242,11 +252,11 @@ def objective_double(params, hparams):
     """evaluate an individual (parameter set) with respect to given objective"""
     # print("params", params)
     # print("hparams", hparams)
-    # return np.random.uniform(0.0, 1.0)
 
     # high-level params
     numsteps = hparams["numsteps"]
     cm = hparams["measure"]
+    
     # core params
     # n = Genet(M = params["M"])
     # print("params[0:24]", params[0:24])
@@ -272,9 +282,10 @@ def objective_double(params, hparams):
         Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
     Xs_meas = Xs[:,[1,2]]
     
-    pi = cm.compute_pi(Xs_meas)
+    # pi = cm.compute_pi(Xs_meas)
     # pi = cm.compute_ais(Xs_meas)
     # pi = cm.compute_pi_local(Xs)
+    pi = cm.compute(Xs_meas)
     pi = max(0, pi) + 1e-9
     # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
@@ -294,6 +305,10 @@ def objective_double(params, hparams):
 
 def main(args):
     """main, just dispatch to mode's main"""
+
+    # experiment signature
+    setattr(args, "expsig", time.strftime("%Y%m%d-%H%M%S"))
+    
     if args.mode == "es_vanilla":
         main_es_vanilla(args)
     elif args.mode == "cma_es":
@@ -393,27 +408,50 @@ def main_hp(args):
         ret[i] = best[k]
         
     return ret
-    
+
+def get_generator(args):
+    if args.gen == "basic":
+        n = Genet(2,2)
+    elif args.get == "double":
+        n = GenetPlast(2, 2)
+    return n
+
+def get_generator_params(args):
+    if args.gen == "basic":
+        n = Genet(2,2)
+        p = n.networks["fast"]["M"]
+    elif args.get == "double":
+        n = GenetPlast(2, 2)
+        p = n.networks["slow"]["M"]
+    return n, p
+
+def get_obj(args):
+    if args.gen == "basic":
+        obj = objective
+    elif args.get == "double":
+        obj = objective_double
+
 def main_es_vanilla(args):
-    # experiment signature
-    expsig = time.strftime("%Y%m%d-%H%M%S")
     # evolution / opt params
-    numgenerations = 50
-    numpopulation = 20
-    numsteps = 1000
+    numgenerations = args.numgenerations
+    numpopulation = args.numpopulation
+    numsteps = args.numsteps
 
     # generations array containing
     generations = []
-    
-    cm = ComplexityMeasure()
+
+    # complexity measure
+    cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau)
 
     # array of parameter ndarray for the current generation
     newgen = []
     for j in range(numpopulation):
+        n, p = get_generator_params(args)
         # n = Genet(2, 2)
         # newgen.append(n.M)
-        n = GenetPlast(2, 2)
-        newgen.append(n.networks["slow"]["M"])
+        # n = GenetPlast(2, 2)
+        # newgen.append(n.networks["slow"]["M"])
+        newgen.append(p)
     
     pl.ion()
     # loop over generations
@@ -427,7 +465,10 @@ def main_es_vanilla(args):
             "continuous": False,
         }
         # pobjective = partial(objective, hparams=hparams)
-        pobjective = partial(objective_double, hparams=hparams)
+        # pobjective = partial(objective_double, hparams=hparams)
+        
+        obj = get_obj(args)
+        pobjective = partial(obj, hparams=hparams)
         
         # loop over population
         for j in range(numpopulation):
@@ -474,7 +515,7 @@ def main_es_vanilla(args):
         generations.append(population)
 
         # save experiment progress
-        pickle.dump(generations, open("ep3/ep3_generations_%s.bin" % (expsig), "wb"))
+        pickle.dump(generations, open("ep3/ep3_generations_%s.bin" % (args.expsig), "wb"))
 
         # generate new generation from loss sorted current generation
         # get best n individuals (FIXME: use a dataframe)
@@ -501,7 +542,7 @@ def main_es_vanilla(args):
                 # tmp[mut_idx] += np.random.normal(0, 0.1)
                 n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
-                print("n", n, tmp[mut_idx])
+                # print("n", n, tmp[mut_idx])
                 newgen[i] = tmp.copy().reshape(tmp_s)
                 
             # # crossover
@@ -531,10 +572,18 @@ if __name__ == "__main__":
                         help="optimization / search mode [es_vanilla], (es_vanilla, cma_es, hp_tpe, hp_random_search, hp_gp_ucb, hp_gp_ei)")
     parser.add_argument("-g", "--generator", type=str, default="basic",
                         help="Type of generator [basic]. This is the structure whose parameters we want to evolve.")
+    parser.add_argument("-ms", "--measure", type=str, default="PI",
+                        help="Type of complexity measure to use as fitness [PI], one of PI, lPI (local PI), AIS")
+    parser.add_argument("-msk", "--measure_k", type=int, default=100,
+                        help="Complexity measure embedding length [100]")
+    parser.add_argument("-mstau", "--measure_tau", type=int, default=1,
+                        help="Complexity measure embedding delay [1]")
     parser.add_argument("-n", "--numsteps", type=int, default=1000,
                         help="number of timesteps for individual evaluation [1000]")
     parser.add_argument("-ng", "--numgenerations", type=int, default=100,
-                        help="number of generations toevolve for [100]")
+                        help="number of generations to evolve for [100]")
+    parser.add_argument("-np", "--numpopulation", type=int, default=20,
+                        help="number of individuals in population [20]")
     args = parser.parse_args()
     main(args)
     # test_ind(None)

@@ -9,14 +9,23 @@ import matplotlib.pyplot as plt
 class Genet(object):
     def __init__(self, modelsize = 2, state_dim = 2, M = None):
         self.modelsize = modelsize
-        self.state_dim = state_dim
+        self.state_dim = state_dim + 1 # bias
+
+        self.networks = {
+            "fast": {},
+            }
+
+        netw = self.networks["fast"]
+        
         # network state update
         if M is not None:
-            self.M = M.copy()
+            netw["M"] = M.copy()
         else:
-            self.M = np.random.uniform(-1e-1, 1e-1, (modelsize, modelsize)) * 5.0
+            netw["M"] = np.random.uniform(-1e-1, 1e-1, (self.modelsize, self.modelsize)) * 5.0
+            
         # network state
-        self.x = np.random.uniform(-1e-2, 1e-2, (self.M.shape[0], 1))
+        netw["x"] = np.random.uniform(-1e-2, 1e-2, (netw["M"].shape[0], 1))
+        
         # transfer func
         self.nonlin = np.tanh
 
@@ -24,10 +33,9 @@ class Genet(object):
         self.leak = 0.5
 
     def step(self):
-        self.x = self.leak * self.x + (1 - self.leak) * (np.dot(self.M, self.x))
-        self.x = self.nonlin(self.x) + np.random.normal(0, 1e-3, self.x.shape)
-        # print self.x.shape
-
+        netw = self.networks["fast"]
+        netw["x"] = self.leak * netw["x"] + (1 - self.leak) * (np.dot(netw["M"], netw["x"]))
+        netw["x"] = self.nonlin(netw["x"]) + np.random.normal(0, 1e-3, netw["x"].shape)
         
 class GenetPlast(Genet):
     def __init__(self, modelsize = 2, state_dim = 2, M = None):
