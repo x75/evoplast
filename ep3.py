@@ -44,7 +44,6 @@ from ep4 import Genet, GenetPlast
 # variants: k, tau, global/local
 class ComplexityMeasure(object):
     def __init__(self, measure="PI", measure_k = 100, measure_tau = 1):
-        init_jpype()
 
         self.measure = measure
         self.k   = measure_k
@@ -381,6 +380,9 @@ def objective_double(params, hparams):
 def main(args):
     """main, just dispatch to mode's main"""
 
+    # init jpype
+    init_jpype(args.jarloc_jidt)
+    
     # experiment signature
     setattr(args, "expsig", time.strftime("%Y%m%d-%H%M%S"))
     
@@ -649,10 +651,12 @@ def main_es_vanilla(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--mode", type=str, default="es_vanilla",
-                        help="optimization / search mode [es_vanilla], (es_vanilla, cma_es, hp_tpe, hp_random_search, hp_gp_ucb, hp_gp_ei)")
     parser.add_argument("-g", "--generator", type=str, default="basic",
                         help="Type of generator [basic]. This is the structure whose parameters we want to evolve.")
+    parser.add_argument("-j", "--jarloc_jidt", type=str, default="/home/src/QK/infodynamics-dist/infodynamics.jar",
+                        help="Location of information dynamics toolkit .jar file [/home/src/QK/infodynamics-dist/infodynamics.jar]")
+    parser.add_argument("-m", "--mode", type=str, default="es_vanilla",
+                        help="optimization / search mode [es_vanilla], (es_vanilla, cma_es, hp_tpe, hp_random_search, hp_gp_ucb, hp_gp_ei)")
     parser.add_argument("-ms", "--measure", type=str, default="PI",
                         help="Type of complexity measure to use as fitness [PI], one of PI, lPI (local PI), AIS")
     parser.add_argument("-msk", "--measure_k", type=int, default=100,
