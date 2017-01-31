@@ -24,6 +24,7 @@ import pickle, time, argparse
 from functools import partial, reduce
 import numpy as np
 import pylab as pl
+from matplotlib import gridspec
 
 from hyperopt import hp
 from hyperopt import STATUS_OK, STATUS_FAIL
@@ -110,7 +111,10 @@ class ComplexityMeasure(object):
             ais_avg += ais_avg_
         return ais_avg
 
-def test_ind(args, M = None):
+def test_ind(args, M = None, fig = None, axes = None):
+    assert fig is not None
+    assert axes is not None
+    
     if M is not None:
         M = M.copy()
     else:
@@ -194,20 +198,30 @@ def test_ind(args, M = None):
     ais  = cm.compute_ais(Xs_meas)
     # pi_l  = cm.compute_pi_local(Xs_meas)
 
-    pl.subplot(311)
-    pl.plot(Xs[:,1], Xs[:,2], "k-o", alpha=0.1)
-    pl.xlim((-1, 1))
-    pl.ylim((-1, 1))
-    pl.text(0, -0.5, "pi = %f nats" % pi)
-    pl.text(0, -0.75, "ais = %f nats" % ais)
-    pl.gca().set_aspect(1)
+    ax1, ax2, ax3, ax4, ax4cb = axes
+        
+    ax1.clear()
+    ax1.plot(Xs[:,1], Xs[:,2], "k-o", alpha=0.1)
+    ax1.set_xlim((-1, 1))
+    ax1.set_ylim((-1, 1))
+    ax1.text(0, -0.5, "pi = %f nats" % pi)
+    ax1.text(0, -0.75, "ais = %f nats" % ais)
+    ax1.set_aspect(1)
+
+    ax4.clear()
+    ax4cb.clear()
+    mappable = ax4.imshow(M, interpolation="none", vmin=-3.0, vmax=3.0)
+    cbar = fig.colorbar(mappable = mappable, cax = ax4cb)
+    ax4.set_aspect(1)
     # pl.yscale("log")
     # pl.xscale("log")
-    pl.subplot(312)
-    pl.plot(Xs[:,1], "k-,", alpha=0.33)
-    pl.subplot(313)
-    pl.plot(Xs[:,2], "k-,", alpha=0.33)
-    pl.show()
+    ax2.clear()
+    ax2.plot(Xs[:,1], "k-,", alpha=0.33)
+    ax3.clear()
+    ax3.plot(Xs[:,2], "k-,", alpha=0.33)
+    pl.draw()
+    pl.pause(1e-3)
+    fig.show()
 
 def evaluate_individual(conf):
     """evaluate an individual for one episode with the given configuration"""
@@ -420,12 +434,16 @@ def main_cma_es(args):
         "measure": ComplexityMeasure(),
         "continuous": True,
     }
-    pobjective = partial(objective, hparams=hparams)
+        
+    obj = get_obj(args)
+    pobjective = partial(obj, hparams=hparams)
+    # pobjective = partial(objective, hparams=hparams)
 
     # func = objective # args["func"]
     # arguments: function, initial params, initial var, options
     # res = cma.fmin(cma.fcts.griewank, [0.1] * 10, 0.5, options)
-    res = cma.fmin(pobjective, [0.5] * 4, 0.3, options)
+    # res = cma.fmin(pobjective, [0.5] * 4, 0.3, options)
+    res = cma.fmin(pobjective, [0.5] * (9 * 12), 3.0, options)
 
     print("result cma_es", res[0], res[1])
     return res[0]
@@ -531,7 +549,20 @@ def main_es_vanilla(args):
         # newgen.append(n.networks["slow"]["M"])
         newgen.append(p)
     
+
     pl.ion()
+    fig = pl.figure(figsize = (18, 16))
+    gs = gridspec.GridSpec(3, 5)
+
+    ax1 = fig.add_subplot(gs[0,:2])
+    ax2 = fig.add_subplot(gs[1,:])
+    ax3 = fig.add_subplot(gs[2,:])
+    ax4 = fig.add_subplot(gs[0,2:4])
+    ax4cb = fig.add_subplot(gs[0,4])
+    
+    fig.show()
+    # pl.draw()
+    
     # loop over generations
     for k in range(numgenerations):
         # arrays of individuals each element of which is
@@ -636,18 +667,23 @@ def main_es_vanilla(args):
             #     newgen[i] = tmp.reshape(tmp_s)
                 
         # print("sorted_x", sorted_x)
-        
-    # print("generations", generations[-1])
-    sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
-    # for ind in generations[-1].values():
-    setattr(args, "numsteps", 5000)
-    for i,ind in enumerate(sorted_x):
-        if i < 5:
-            test_ind(args, ind[1]["M"])
-        print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
+
+        if k % args.plotinterval == 0:        
+            # print("generations", generations[-1])
+            sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
+            # for ind in generations[-1].values():
+            numsteps_ = getattr(args, "numsteps")
+            setattr(args, "numsteps", 1000)
+            for i,ind in enumerate(sorted_x):
+                if i >= (numpopulation - 5):
+                    test_ind(args = args, M = ind[1]["M"], fig = fig, axes = [ax1, ax2, ax3, ax4, ax4cb])
+                print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
+            setattr(args, "numsteps", numsteps_)
+            
     pl.ioff()
     pl.show()
-    pl.gcf().savefig("ep3_es_vanilla_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
+    if args.plotsave:
+        pl.gcf().savefig("ep3_es_vanilla_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
     # pl.pause(100)
 
 if __name__ == "__main__":
@@ -670,6 +706,7 @@ if __name__ == "__main__":
                         help="number of generations to evolve for [100]")
     parser.add_argument("-np", "--numpopulation", type=int, default=20,
                         help="number of individuals in population [20]")
+    parser.add_argument('-ps', "--plotsave", action='store_true', help='Save plot to pdf?')
+    parser.add_argument('-pi', "--plotinterval", type=int, default=10, help='Interval for intermediate plotting [10], in number of generations')
     args = parser.parse_args()
     main(args)
-    # test_ind(None)
