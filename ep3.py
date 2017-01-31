@@ -15,6 +15,7 @@
 #  1 - check base network dynamics
 #  2 - average over multiple runs per individual
 #  3 - ensure diversity
+#  4 - proper selection, xover, mut operators
 #  found error: newgen wasn't properly used but overwritten by random configuration
 
 from __future__ import print_function
@@ -28,7 +29,10 @@ from hyperopt import hp
 from hyperopt import STATUS_OK, STATUS_FAIL
 from hyperopt import fmin, tpe, Trials, rand, anneal
 # import hp_gpsmbo.hpsuggest
-from hp_gpsmbo import suggest_algos
+try:
+    from hp_gpsmbo import suggest_algos
+except ImportError, e:
+    print("Couldn't import hp_gpsmbo, %s" % e)
 
 from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
 
@@ -289,7 +293,7 @@ def objective_double(params, hparams):
         return experiment
 
 def main(args):
-    """main, dispatch mode"""
+    """main, just dispatch to mode's main"""
     if args.mode == "es_vanilla":
         main_es_vanilla(args)
     elif args.mode == "cma_es":
@@ -525,8 +529,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode", type=str, default="es_vanilla",
                         help="optimization / search mode [es_vanilla], (es_vanilla, cma_es, hp_tpe, hp_random_search, hp_gp_ucb, hp_gp_ei)")
+    parser.add_argument("-g", "--generator", type=str, default="basic",
+                        help="Type of generator [basic]. This is the structure whose parameters we want to evolve.")
     parser.add_argument("-n", "--numsteps", type=int, default=1000,
                         help="number of timesteps for individual evaluation [1000]")
+    parser.add_argument("-ng", "--numgenerations", type=int, default=100,
+                        help="number of generations toevolve for [100]")
     args = parser.parse_args()
     main(args)
     # test_ind(None)
