@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import argparse
 
 import numpy as np
@@ -8,7 +10,7 @@ import matplotlib.pyplot as plt
 # producing network / generator / autonomous
 class Genet(object):
     def __init__(self, modelsize = 2, state_dim = 2, M = None):
-        self.modelsize = modelsize
+        # self.modelsize = modelsize
         self.state_dim = state_dim + 1 # bias
 
         self.networks = {
@@ -21,7 +23,7 @@ class Genet(object):
         if M is not None:
             netw["M"] = M.copy()
         else:
-            netw["M"] = np.random.uniform(-1e-1, 1e-1, (self.modelsize, self.modelsize)) * 5.0
+            netw["M"] = np.random.uniform(-1e-1, 1e-1, (self.state_dim, self.state_dim)) * 5.0
             
         # network state
         netw["x"] = np.random.uniform(-1e-2, 1e-2, (netw["M"].shape[0], 1))
@@ -82,15 +84,15 @@ class GenetPlast(Genet):
         netw["x"] += np.random.normal(0.0, 1e-2, netw["x"].shape)
         
         netw_s = self.networks["slow"]
-        # print "netw M .shape", netw_s["M"].shape, netw_s["M"]
+        # print("netw M .shape", netw_s["M"].shape, netw_s["M"])
         # netw["M"] =
         Xx = np.vstack((netw["x"], netw["M"].reshape((-1, 1))))
-        # print "Xx,shape", Xx.shape
+        # print("Xx,shape", Xx.shape)
         upd = np.dot(netw_s["M"], Xx).reshape(netw["M"].shape)
-        # print "upd.shape", upd.shape, upd
+        # print("upd.shape", upd.shape, upd)
         fullupd = (netw_s["tau"] * netw["M"] + (1 - netw_s["tau"]) * upd)
         netw["M"] = np.clip(fullupd, -3, 3) # np.tanh(fullupd) * 3.0
-        # print "A", A.shape
+        # print("A", A.shape)
 
 def get_log(g, numiterations):
     # prepare logging
@@ -98,9 +100,9 @@ def get_log(g, numiterations):
     for k1, v1 in g.networks.items():
         log[k1] = {}
         for k2, v2 in v1.items():
-            # print "type(v2)", type(v2)
+            # print("type(v2)", type(v2))
             if type(v2) is float:
-                # print "is float"
+                # print("is float")
                 log[k1][k2] = v2
             elif type(v2) is np.ndarray:
                 log[k1][k2] = np.zeros((numiterations, ) + v2.shape)
@@ -118,7 +120,7 @@ def main(args):
     newgen = []
     for i in range(numindividuals):
         # g = GenetPlast()
-        # print "g", g
+        # print("g", g)
         newgen.append([])
 
     for g in range(numgenerations):
@@ -127,7 +129,7 @@ def main(args):
             log = get_log(g, numiterations)
             for t in range(numiterations):
                 g.step()
-                print "g.x", g.networks["fast"]["x"]
+                print("g.x", g.networks["fast"]["x"])
                 log["fast"]["x"][t] = g.networks["fast"]["x"]
                 log["fast"]["M"][t] = g.networks["fast"]["M"]
 

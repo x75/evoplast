@@ -111,7 +111,7 @@ class ComplexityMeasure(object):
             ais_avg += ais_avg_
         return ais_avg
 
-def test_ind(M = None):
+def test_ind(args, M = None):
     if M is not None:
         M = M.copy()
     else:
@@ -161,31 +161,40 @@ def test_ind(M = None):
         M = [[ 0.56363375, -0.19903545],  [-0.3386425,   0.86326516]]
         
     M = np.array(M)
-        
-    # n = Genet(M = M)
-    n = GenetPlast(M = M)
 
-    numsteps = 2000
-
-    # log_dim = n.state_dim
-    log_dim = n.state_dim + n.networks["slow"]["s_dim"]
+    conf = {
+        "numsteps": args.numsteps,
+        "generator": args.generator,
+        "params": M
+    }
         
-    Xs = np.zeros((numsteps, log_dim))
-    # loop over timesteps
-    for i in range(numsteps):
-        # x = np.dot(M, x)
-        n.step()
-        # Xs[i] = n.x.reshape((n.state_dim,))
-        Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
-        Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
+    Xs = evaluate_individual(conf)
+
+    # # n = Genet(M = M)
+    # n = GenetPlast(M = M)
+
+    # numsteps = 2000
+
+    # # log_dim = n.state_dim
+    # log_dim = n.state_dim + n.networks["slow"]["s_dim"]
+        
+    # Xs = np.zeros((numsteps, log_dim))
+    # # loop over timesteps
+    # for i in range(numsteps):
+    #     # x = np.dot(M, x)
+    #     n.step()
+    #     # Xs[i] = n.x.reshape((n.state_dim,))
+    #     Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+    #     Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
     # pi = cm.compute_pi(Xs)
+    
     Xs_meas = Xs[:,[1,2]]
 
     cm  = ComplexityMeasure()
     pi  = cm.compute_pi(Xs_meas)
     ais  = cm.compute_ais(Xs_meas)
-    pi_l  = cm.compute_pi_local(Xs_meas)
-        
+    # pi_l  = cm.compute_pi_local(Xs_meas)
+
     pl.subplot(311)
     pl.plot(Xs[:,1], Xs[:,2], "k-o", alpha=0.1)
     pl.xlim((-1, 1))
@@ -201,6 +210,36 @@ def test_ind(M = None):
     pl.plot(Xs[:,2], "k-,", alpha=0.33)
     pl.show()
 
+def evaluate_individual(conf):
+    """evaluate an individual for one episode with the given configuration"""
+
+    if conf["generator"] == "basic":
+        ind_cls = Genet
+    elif conf["generator"] == "double":
+        ind_cls = GenetPlast
+        #        ind_logdims = 
+    n = ind_cls(M = conf["params"])
+
+    ind_logdims = [n.state_dim]
+    if conf["generator"] == "double":
+        ind_logdims += [n.networks["slow"]["s_dim"]]
+    ind_logdim = reduce(lambda x,y: x+y, ind_logdims)
+    
+    numsteps = conf["numsteps"]
+
+    # initialize storage
+    Xs = np.zeros((numsteps, ind_logdim))
+    
+    # loop over timesteps
+    for i in range(numsteps):
+        n.step()
+        # Xs[i] = n.x.reshape((n.state_dim,))
+        Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+        if ind_logdim > n.state_dim:
+            Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
+
+    return Xs
+        
 def objective(params, hparams):
     """evaluate an individual (parameter set) with respect to given objective"""
     # print("params", params)
@@ -212,21 +251,43 @@ def objective(params, hparams):
     cm = hparams["measure"]
     # core params
     # n = Genet(M = params["M"])
-    M = np.array(params[0:4]).reshape((2,2))
-    n = Genet(M = M)
+    # print("len(params)", len(params), params)
+
+    rows = len(params)
+    if rows > 0:
+        cols = len(params[0])
+    else:
+        status = STATUS_FAIL
+        
+    M = np.array(params[0:(rows*cols)]).reshape((rows,cols))
+    
     # a dict containg network config, timeseries, loss
     experiment = dict()
-    #  create network
-    # n = Genet(2, 2)
-    # state trajectory
-    Xs = np.zeros((numsteps, n.state_dim))
-    # loop over timesteps
-    for i in range(numsteps):
-        # x = np.dot(M, x)
-        n.step()
-        Xs[i] = n.x.reshape((n.state_dim,))
-        Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+    
+    # #  create network
+    # # n = Genet(2, 2)
+    # n = Genet(M = M)
+    
+    # # state trajectory
+    # Xs = np.zeros((numsteps, n.state_dim))
+    # # loop over timesteps
+    # for i in range(numsteps):
+    #     # x = np.dot(M, x)
+    #     n.step()
+    #     # Xs[i] = n.x.reshape((n.state_dim,))
+    #     # print("n.networks[\"fast\"][\"x\"].shape", n.networks["fast"]["x"].shape)
+    #     Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+
+    conf = {
+        "numsteps": numsteps,
+        "generator": args.generator,
+        "params": M
+    }
+        
+    Xs = evaluate_individual(conf)
+        
     Xs_meas = Xs[:,[1,2]]
+    
     # pi = cm.compute_pi(Xs)
     # pi = cm.compute_ais(Xs)
     # pi = cm.compute_pi_local(Xs)
@@ -235,11 +296,13 @@ def objective(params, hparams):
     # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
     loss = -pi
+
+    status = STATUS_OK
     # return structure: params, timeseries, scalar loss
     experiment = {
         "loss": loss, # compute_complexity(Xs)
-        "status": STATUS_OK, # compute_complexity(Xs)
-        "M": n.M,
+        "status": status, # compute_complexity(Xs)
+        "M": M, # n.networks["fast"]["M"],
         "timeseries": Xs.copy(),
         # "loss": np.var(Xs),
     }
@@ -260,26 +323,38 @@ def objective_double(params, hparams):
     # core params
     # n = Genet(M = params["M"])
     # print("params[0:24]", params[0:24])
+    # print("len(params)", len(params), params)
     M = np.array(params).reshape((9,12))
-    n = GenetPlast(M = M)
+    
     # a dict containg network config, timeseries, loss
     experiment = dict()
-    #  create network
-    # n = Genet(2, 2)
-
-    # log_dim = n.state_dim
-    log_dim = n.state_dim + n.networks["slow"]["s_dim"]
-        
-    # state trajectory
-    Xs = np.zeros((numsteps, log_dim))
     
-    # loop over timesteps
-    for i in range(numsteps):
-        # x = np.dot(M, x)
-        n.step()
-        # Xs[i] = n.x.reshape((log_dim,))
-        Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
-        Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
+    # #  create network
+    # # n = Genet(2, 2)
+    # n = GenetPlast(M = M)
+
+    # # log_dim = n.state_dim
+    # log_dim = n.state_dim + n.networks["slow"]["s_dim"]
+        
+    # # state trajectory
+    # Xs = np.zeros((numsteps, log_dim))
+    
+    # # loop over timesteps
+    # for i in range(numsteps):
+    #     # x = np.dot(M, x)
+    #     n.step()
+    #     # Xs[i] = n.x.reshape((log_dim,))
+    #     Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+    #     Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
+
+    conf = {
+        "numsteps": numsteps,
+        "generator": args.generator,
+        "params": M
+    }
+        
+    Xs = evaluate_individual(conf)
+        
     Xs_meas = Xs[:,[1,2]]
     
     # pi = cm.compute_pi(Xs_meas)
@@ -294,7 +369,7 @@ def objective_double(params, hparams):
     experiment = {
         "loss": loss, # compute_complexity(Xs)
         "status": STATUS_OK, # compute_complexity(Xs)
-        "M": n.networks["slow"]["M"], # n.M
+        "M": M, # n.networks["slow"]["M"], # n.M
         "timeseries": Xs.copy(),
         # "loss": np.var(Xs),
     }
@@ -329,7 +404,7 @@ def main(args):
         setattr(args, "suggest", partial(suggest_algos.ei, stop_at=1e-0))
         main_hp(args)
     elif args.mode == "test_ind":
-        test_ind()
+        test_ind(args)
 
 def main_cma_es(args):
     import cma
@@ -410,26 +485,27 @@ def main_hp(args):
     return ret
 
 def get_generator(args):
-    if args.gen == "basic":
+    if args.generator == "basic":
         n = Genet(2,2)
-    elif args.get == "double":
+    elif args.generator == "double":
         n = GenetPlast(2, 2)
     return n
 
 def get_generator_params(args):
-    if args.gen == "basic":
+    if args.generator == "basic":
         n = Genet(2,2)
         p = n.networks["fast"]["M"]
-    elif args.get == "double":
+    elif args.generator == "double":
         n = GenetPlast(2, 2)
         p = n.networks["slow"]["M"]
     return n, p
 
 def get_obj(args):
-    if args.gen == "basic":
+    if args.generator == "basic":
         obj = objective
-    elif args.get == "double":
+    elif args.generator == "double":
         obj = objective_double
+    return obj
 
 def main_es_vanilla(args):
     # evolution / opt params
@@ -531,6 +607,9 @@ def main_es_vanilla(args):
         # print(sorted_x[0][1])
         newgen[0] = sorted_x[0][1]["M"]
         for i in range(1, numpopulation):
+            # select
+            # 1: sample weighted by fitness
+            # 2: sample weighted by fitness rank
             c = np.random.choice(15)# make tournament or something
             newgen[i] = sorted_x[c][1]["M"]
             # mutate
@@ -559,12 +638,14 @@ def main_es_vanilla(args):
     # print("generations", generations[-1])
     sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
     # for ind in generations[-1].values():
+    setattr(args, "numsteps", 5000)
     for i,ind in enumerate(sorted_x):
         if i < 5:
-            test_ind(ind[1]["M"])
+            test_ind(args, ind[1]["M"])
         print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
     pl.ioff()
     pl.show()
+    # pl.pause(100)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
