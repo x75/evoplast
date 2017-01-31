@@ -54,7 +54,7 @@ class ComplexityMeasure(object):
         
     # loss measure complexity
     def compute_pi(self, X):
-        k = 10
+        k = 200
         # self.piCalc.setObservations(X.reshape((X.shape[0],)))
         pi_avg = 0.0
         # FIXME: make that a joint PI
@@ -263,10 +263,10 @@ def objective_double(params, hparams):
         # Xs[i] = n.x.reshape((log_dim,))
         Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
         Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
-    # pi = cm.compute_pi(Xs)
     Xs_meas = Xs[:,[1,2]]
     
-    pi = cm.compute_ais(Xs_meas)
+    pi = cm.compute_pi(Xs_meas)
+    # pi = cm.compute_ais(Xs_meas)
     # pi = cm.compute_pi_local(Xs)
     pi = max(0, pi) + 1e-9
     # print "pi = %f nats" % pi
