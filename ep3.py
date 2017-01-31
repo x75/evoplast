@@ -19,7 +19,7 @@
 
 from __future__ import print_function
 
-import cPickle, time, argparse
+import pickle, time, argparse
 from functools import partial
 import numpy as np
 import pylab as pl
@@ -470,7 +470,7 @@ def main_es_vanilla(args):
         generations.append(population)
 
         # save experiment progress
-        cPickle.dump(generations, open("ep3/ep3_generations_%s.bin" % (expsig), "wb"))
+        pickle.dump(generations, open("ep3/ep3_generations_%s.bin" % (expsig), "wb"))
 
         # generate new generation from loss sorted current generation
         # get best n individuals (FIXME: use a dataframe)
