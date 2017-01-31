@@ -647,6 +647,7 @@ def main_es_vanilla(args):
         print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
     pl.ioff()
     pl.show()
+    pl.gcf().savefig("ep3_es_vanilla_%s" % args.expsig, dpi=300, bbox_inches="tight")
     # pl.pause(100)
 
 if __name__ == "__main__":
