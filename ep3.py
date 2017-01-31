@@ -21,7 +21,7 @@
 from __future__ import print_function
 
 import pickle, time, argparse
-from functools import partial
+from functools import partial, reduce
 import numpy as np
 import pylab as pl
 
