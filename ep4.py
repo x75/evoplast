@@ -60,14 +60,14 @@ class GenetPlast(Genet):
         self.networks["fast"]["M"] = np.random.uniform(-1e-2, 1e-2, (self.state_dim, self.state_dim))
 
         # fast network timescale
-        self.networks["slow"]["tau"] = 0.8 # 0.96
+        self.networks["slow"]["tau"] = 0.99 # 0.8 # 0.96
         # slow network state dim
         self.networks["slow"]["s_dim"] = np.prod(self.networks["fast"]["M"].shape)
         # slow network input dim
         self.networks["slow"]["i_dim"] = self.networks["slow"]["s_dim"] + self.state_dim
         # slow network transition matrix
         if M is None:
-            self.networks["slow"]["M"] = np.random.uniform(-1, 1, (self.networks["slow"]["s_dim"], self.networks["slow"]["i_dim"])) * 0.5
+            self.networks["slow"]["M"] = np.random.uniform(-1, 1, (self.networks["slow"]["s_dim"], self.networks["slow"]["i_dim"])) * 0.005
         else:
             self.networks["slow"]["M"] = M
             
@@ -90,9 +90,11 @@ class GenetPlast(Genet):
         # print("Xx,shape", Xx.shape)
         upd = np.dot(netw_s["M"], Xx).reshape(netw["M"].shape)
         # print("upd.shape", upd.shape, upd)
-        fullupd = (netw_s["tau"] * netw["M"] + (1 - netw_s["tau"]) * upd)
+        # fullupd = (netw_s["tau"] * netw["M"] + (1 - netw_s["tau"]) * upd)
+        fullupd = (1 * netw["M"] + (1 - netw_s["tau"]) * upd)
         # netw["M"] = np.clip(fullupd, -3, 3) #
         netw["M"] = np.tanh(0.1 * fullupd) * 10.0
+        # print("same?", self.networks["fast"]["M"] is netw["M"])
         # print("A", A.shape)
 
 def get_log(g, numiterations):

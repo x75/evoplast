@@ -237,7 +237,7 @@ def test_ind(args, M = None, fig = None, axes = None):
 
     ax4.clear()
     ax4cb.clear()
-    mappable = ax4.imshow(M, interpolation="none", vmin=-3.0, vmax=3.0)
+    mappable = ax4.imshow(M, interpolation="none")#, vmin=-3.0, vmax=3.0)
     cbar = fig.colorbar(mappable = mappable, cax = ax4cb)
     ax4.set_aspect(1)
     # pl.yscale("log")
@@ -268,15 +268,18 @@ def evaluate_individual(conf):
     numsteps = conf["numsteps"]
 
     # initialize storage
-    Xs = np.zeros((numsteps, ind_logdim))
+    Xs = np.zeros((numsteps * 1, ind_logdim))
     
     # loop over timesteps
-    for i in range(numsteps):
-        n.step()
-        # Xs[i] = n.x.reshape((n.state_dim,))
-        Xs[i,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
-        if ind_logdim > n.state_dim:
-            Xs[i,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
+    for j in range(1):
+        n = ind_cls(M = conf["params"])
+        for i in range(numsteps):
+            n.step()
+            idx = (j * numsteps) + i
+            # Xs[i] = n.x.reshape((n.state_dim,))
+            Xs[idx,:n.state_dim] = n.networks["fast"]["x"].reshape((n.state_dim,))
+            if ind_logdim > n.state_dim:
+                Xs[idx,n.state_dim:] = n.networks["fast"]["M"].reshape((n.networks["slow"]["s_dim"],))
 
     return Xs
         
@@ -324,14 +327,17 @@ def objective(params, hparams):
         "params": M
     }
         
-    Xs = evaluate_individual(conf)
+    pi = 0
+    for i in range(5):
+        Xs = evaluate_individual(conf)
         
-    Xs_meas = Xs[:,[1,2]]
+        Xs_meas = Xs[:,[1,2]]
     
-    # pi = cm.compute_pi(Xs)
-    # pi = cm.compute_ais(Xs)
-    # pi = cm.compute_pi_local(Xs)
-    pi = cm.compute(Xs_meas)
+        # pi = cm.compute_pi(Xs)
+        # pi = cm.compute_ais(Xs)
+        # pi = cm.compute_pi_local(Xs)
+        pi += cm.compute(Xs_meas)
+    pi /= 5.0
     pi = max(0, pi) + 1e-9
     # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
@@ -393,14 +399,17 @@ def objective_double(params, hparams):
         "params": M
     }
         
-    Xs = evaluate_individual(conf)
+    pi = 0
+    for i in range(5):
+        Xs = evaluate_individual(conf)
         
-    Xs_meas = Xs[:,[1,2]]
+        Xs_meas = Xs[:,[1,2]]
     
-    # pi = cm.compute_pi(Xs_meas)
-    # pi = cm.compute_ais(Xs_meas)
-    # pi = cm.compute_pi_local(Xs)
-    pi = cm.compute(Xs_meas)
+        # pi = cm.compute_pi(Xs_meas)
+        # pi = cm.compute_ais(Xs_meas)
+        # pi = cm.compute_pi_local(Xs)
+        pi += cm.compute(Xs_meas)
+    pi /= 5.0
     pi = max(0, pi) + 1e-9
     # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
@@ -578,7 +587,7 @@ def main_es_vanilla(args):
     
 
     pl.ion()
-    fig = pl.figure(figsize = (18, 16))
+    fig = pl.figure(figsize = (16, 14))
     gs = gridspec.GridSpec(3, 5)
 
     ax1 = fig.add_subplot(gs[0,:2])
@@ -685,14 +694,23 @@ def main_es_vanilla(args):
             # 3: naive uniform sampling
             # c = np.random.choice(min(numpopulation, 15))# make tournament or something
             newgen[i] = sorted_x[c][1]["M"]
+
+            c1 = argsample(fitprobs)[0]
+            c2 = argsample(fitprobs)[0]
+            sh_ = sorted_x[c1][1]["M"].shape
+            m1 = sorted_x[c1][1]["M"].flatten()
+            m2 = sorted_x[c2][1]["M"].flatten()
+            xover_at = np.random.randint(m1.shape[0])
+            newgen[i] = np.hstack((m1[:xover_at], m2[xover_at:])).reshape(sh_)
+            
             # mutate
             if np.random.uniform() < 0.3: # 05:
                 mut_idx = np.random.choice(np.prod(newgen[i].shape))
                 # print("mut_idx", mut_idx)
                 tmp_s = newgen[i].shape
                 tmp = newgen[i].flatten()
-                n = np.random.normal(0, 0.1)
-                # n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
+                # n = np.random.normal(0, 0.1)
+                n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
                 # print("n", n, tmp[mut_idx])
                 newgen[i] = tmp.copy().reshape(tmp_s)
