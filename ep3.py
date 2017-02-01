@@ -656,11 +656,11 @@ def save_topinds(topinds, args, generation_cnt = 0):
     cbar = fig2.colorbar(mappable = mappable, cax = cbarax, orientation = "horizontal") # , fraction = 0.1)
 
     fig1.subplots_adjust(wspace=0.0, hspace = 0.0)
-    fig1.savefig("%s/gen%04d_top%02d_pheno_%s.jpg" % (args.datadir, generation_cnt, len(topinds), args.expsig), dpi = 300, bbox_inches="tight")
+    fig1.savefig("%s/gen%04d_top%02d_pheno_%s.%s" % (args.datadir, generation_cnt, len(topinds), args.expsig, args.snapshotfiletype), dpi = 300, bbox_inches="tight")
     pl.close(fig1)
     
     fig2.subplots_adjust(wspace=0.0, hspace = 0.05)
-    fig2.savefig("%s/gen%04d_top%02d_geno__%s.jpg" % (args.datadir, generation_cnt, len(topinds), args.expsig), dpi = 300, bbox_inches="tight")
+    fig2.savefig("%s/gen%04d_top%02d_geno__%s.%s" % (args.datadir, generation_cnt, len(topinds), args.expsig, args.snapshotfiletype), dpi = 300, bbox_inches="tight")
     pl.close(fig2)
     # pl.draw()
     # pl.pause(1e-4)
@@ -974,5 +974,7 @@ if __name__ == "__main__":
                         help="number of individuals in population [20]")
     parser.add_argument('-ps', "--plotsave", action='store_true', help='Save plot to pdf?')
     parser.add_argument('-pi', "--plotinterval", type=int, default=10, help='Interval for intermediate plotting [10], in number of generations')
+    parser.add_argument("-sf", "--snapshotfiletype", type=str, default="jpg",
+                        help="Filetype for snapshots saved to datadir [jpg]")
     args = parser.parse_args()
     main(args)
