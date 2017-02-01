@@ -3,7 +3,6 @@
 # their weights towards a "complexity" objective: ES, CMA-ES, hyperopt
 
 # TODO
-#  - complete logging + storage of experiment, including genotype, timeseries (phenotype), parameters
 #  - sample and plot catalogue of phylogenetic history
 #  - different esstimators: kernel, kraskov, ...
 #  - different measures: TE / AIS / lyapunov / recurrence plot / literature
@@ -22,15 +21,20 @@
 # add additional states to fast/slow combi
 
 # DONE
+#  - x complete logging
+#   - x experiment config
+#   - x genotype
+#   - x phenotype (timeseries)
 #  found error: newgen wasn't properly used but overwritten by random configuration
 
 from __future__ import print_function
 
-import pickle, time, argparse
+import pickle, time, argparse, os
 from functools import partial, reduce
 import numpy as np
 import pylab as pl
 from matplotlib import gridspec
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from hyperopt import hp
 from hyperopt import STATUS_OK, STATUS_FAIL
@@ -58,22 +62,49 @@ def argsample(pdf, n=1):
     return np.searchsorted(cdf, np.random.uniform(0, cdf[-1], n))
 
 class ComplexityMeasure(object):
-    def __init__(self, measure="PI", measure_k = 100, measure_tau = 1):
+    def __init__(self, measure="PI", measure_k = 100, measure_tau = 1, estimator = "kraskov1"):
 
         self.measure = measure
         self.k   = measure_k
         self.tau = measure_tau
+        self.estimator = estimator
+        # calc_init_args = None
         
-        # Predictive Information
-        self.piCalcClass = JPackage("infodynamics.measures.continuous.kraskov").PredictiveInfoCalculatorKraskov
-        # self.piCalcClass = JPackage("infodynamics.measures.continuous.gaussian").PredictiveInfoCalculatorGaussian
-        # self.piCalcClass = JPackage("infodynamics.measures.continuous.kernel").PredictiveInfoCalculatorKernel
-        self.piCalc = self.piCalcClass()
+        # Predictive Information (PI) and Active Information Storage (AIS) Calculator
+        if self.estimator == "kraskov1":
+            alg = 1
+            self.piCalcClass = JPackage("infodynamics.measures.continuous.kraskov").PredictiveInfoCalculatorKraskov
+            self.aisCalcClass = JPackage("infodynamics.measures.continuous.kraskov").ActiveInfoStorageCalculatorKraskov
+            self.piCalc = self.piCalcClass(alg)
+            self.aisCalc = self.aisCalcClass(alg)
+            self.picalc_init  =  self.piCalc.initialise
+            self.aiscalc_init  =  self.aisCalc.initialise
+        elif self.estimator == "kraskov2":
+            alg = 2
+            self.piCalcClass = JPackage("infodynamics.measures.continuous.kraskov").PredictiveInfoCalculatorKraskov
+            self.aisCalcClass = JPackage("infodynamics.measures.continuous.kraskov").ActiveInfoStorageCalculatorKraskov
+            self.piCalc = self.piCalcClass(alg)
+            self.aisCalc = self.aisCalcClass(alg)
+            self.picalc_init  =  self.piCalc.initialise
+            self.aiscalc_init  =  self.aisCalc.initialise
+        elif self.estimator == "gaussian":
+            self.piCalcClass = JPackage("infodynamics.measures.continuous.gaussian").PredictiveInfoCalculatorGaussian
+            self.aisCalcClass = JPackage("infodynamics.measures.continuous.gaussian").ActiveInfoStorageCalculatorGaussian
+            self.piCalc = self.piCalcClass()
+            self.aisCalc = self.aisCalcClass()
+            self.picalc_init  =  self.piCalc.initialise
+            self.aiscalc_init  =  self.aisCalc.initialise
+        elif self.estimator == "kernel":
+            calc_init_args = {"epsilon": 0.001}
+            self.piCalcClass = JPackage("infodynamics.measures.continuous.kernel").PredictiveInfoCalculatorKernel
+            self.aisCalcClass = JPackage("infodynamics.measures.continuous.kernel").ActiveInfoStorageCalculatorKernel
+            self.piCalc = self.piCalcClass()
+            self.aisCalc = self.aisCalcClass()
+            self.picalc_init  =  partial(self.piCalc.initialise, epsilon = 0.001)
+            self.aiscalc_init  =  partial(self.aisCalc.initialise, epsilon = 0.001)
+            
         self.piCalc.setProperty("NORMALISE", "false"); # Normalise the individual var
 
-        # Active Information Storage
-        self.aisCalcClass = JPackage("infodynamics.measures.continuous.kraskov").ActiveInfoStorageCalculatorKraskov
-        self.aisCalc = self.aisCalcClass()
         self.aisCalc.setProperty("NORMALISE", "false"); # Normalise the individual variables
 
         if self.measure == "PI":
@@ -89,7 +120,9 @@ class ComplexityMeasure(object):
         pi_avg = 0.0
         # FIXME: make that a joint PI
         for d in range(X.shape[1]):
-            self.piCalc.initialise(self.k, self.tau)
+            # self.piCalc.initialise(self.k, self.tau)
+            # self.piCalc.initialise(self.k, self.tau, 0.001)
+            self.picalc_init(self.k, self.tau)
             self.piCalc.setObservations(X[:,d])
             pi_avg += self.piCalc.computeAverageLocalOfObservations();
         return pi_avg
@@ -100,7 +133,9 @@ class ComplexityMeasure(object):
         pi_avg = 0.0
         for d in range(X.shape[1]):
             for i in range(winsize, X.shape[0], 10):
-                self.piCalc.initialise(self.k, self.tau)
+                self.picalc_init(self.k, self.tau)
+                # self.piCalc.initialise(self.k, self.tau)
+                # self.piCalc.initialise(self.k, self.tau, 0.1)
                 # print("X[i:i+winsize,d]", X[i-winsize:i,d].shape)
                 self.piCalc.setObservations(X[i-winsize:i,d])
                 # pi_local = self.piCalc.computeLocalOfPreviousObservations()
@@ -112,7 +147,9 @@ class ComplexityMeasure(object):
     def compute_ais(self, X):
         ais_avg = 0.0
         for d in range(X.shape[1]):
-            self.aisCalc.initialise(self.k, self.tau) # init for kraskov
+            # self.aisCalc.initialise(self.k, self.tau) # init for kraskov
+            # self.aisCalc.initialise(self.k, self.tau, 0.001)
+            self.aiscalc_init(self.k, self.tau)
             src = X[:,d].ravel()
             # print(src)
             self.aisCalc.setObservations(src)
@@ -226,7 +263,8 @@ def test_ind(args, M = None, fig = None, axes = None):
     
     Xs_meas = Xs[:,[1,2]]
 
-    cm  = ComplexityMeasure()
+    cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau, args.estimator)
+    # cm  = ComplexityMeasure()
     pi  = cm.compute_pi(Xs_meas)
     ais  = cm.compute_ais(Xs_meas)
     # pi_l  = cm.compute_pi_local(Xs_meas)
@@ -235,7 +273,8 @@ def test_ind(args, M = None, fig = None, axes = None):
     ax1, ax4, ax4cb, ax2, ax3 = axes
         
     ax1.clear()
-    ax1.plot(Xs[:,1], Xs[:,2], "k-o", alpha=0.1)
+    ax1.plot(Xs[:,1], Xs[:,2], "k.", alpha=0.75)
+    # h2dimg,_,_,_ = ax1.hist2d(Xs[:,1], Xs[:,2], bins = 20, range = [[-1, 1], [-1, 1]], cmap = pl.get_cmap("Greys"))
     ax1.set_xlim((-1, 1))
     ax1.set_ylim((-1, 1))
     ax1.text(0, -0.5, "pi = %f nats" % pi)
@@ -244,8 +283,8 @@ def test_ind(args, M = None, fig = None, axes = None):
 
     ax4.clear()
     ax4cb.clear()
-    mappable = ax4.imshow(M, interpolation="none")#, vmin=-3.0, vmax=3.0)
-    cbar = fig.colorbar(mappable = mappable, cax = ax4cb)
+    mappable = ax4.imshow(M, interpolation="none", cmap = pl.get_cmap("seismic"))#, vmin=-3.0, vmax=3.0)
+    cbar = fig.colorbar(mappable = mappable, cax = ax4cb, orientation = "vertical")
     ax4.set_aspect(1)
     # pl.yscale("log")
     # pl.xscale("log")
@@ -256,6 +295,9 @@ def test_ind(args, M = None, fig = None, axes = None):
     pl.draw()
     pl.pause(1e-3)
     fig.show()
+
+    # h2dimg
+    return Xs, pi, ais
 
 def evaluate_individual(conf):
     """evaluate an individual for one episode with the given configuration"""
@@ -558,10 +600,15 @@ def get_generator_params(args):
     if args.generator == "basic":
         n = Genet(2,2)
         p = n.networks["fast"]["M"]
+        t = n.networks["fast"]["tau"]
     elif args.generator == "double":
         n = GenetPlast(2, 2)
         p = n.networks["slow"]["M"]
-    return n, p
+        t1 = np.ones_like(n.networks["fast"]["x"]) * n.networks["fast"]["tau"]
+        t2 = np.ones_like(n.networks["slow"]["M"]) * n.networks["slow"]["tau"]
+        # t = np.vstack((t1, t2))
+        t = t1
+    return n, p, t
 
 def get_obj(args):
     if args.generator == "basic":
@@ -570,13 +617,64 @@ def get_obj(args):
         obj = objective_double
     return obj
 
+def save_topinds(topinds, args, generation_cnt = 0):
+    Mmax = 0
+    Mmin = 0
+    for topind in topinds:
+        Mmax = max(Mmax, np.max(topind["M"]))
+        Mmin = min(Mmin, np.min(topind["M"]))
+        
+    fig1 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
+    fig2 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
+    # fig.show()
+    gs1 = gridspec.GridSpec(1, len(topinds) * 1)
+    gs2 = gridspec.GridSpec(2, len(topinds) * 1, height_ratios = [0.95, 0.05]) # + 1, width_ratios = [1] * len(topinds) + [0.1])
+
+    for i, topind in enumerate(topinds):
+        ax1 = fig1.add_subplot(gs1[0,i])
+        ax1.axis("off")
+        # print("type(H2D)", type(topind["H2D"]))
+        # ax1.imshow(topind["H2D"], interpolation = "none", cmap = pl.get_cmap("Greys"))
+        ax1.plot(topind["H2D"][:,1], topind["H2D"][:,2], "k.", alpha=0.75)
+        ax1.set_xlim([-1, 1])
+        ax1.set_ylim((-1, 1))
+        ax1.set_aspect(1)
+        ax1.set_xticks([])
+        ax1.set_yticks([])
+
+        ax2 = fig2.add_subplot(gs2[0,i])
+        mappable = ax2.imshow(topind["M"], interpolation = "none", cmap = pl.get_cmap("seismic"), vmin = Mmin, vmax = Mmax)
+        ax2.set_aspect(1)
+        ax2.set_xticks([])
+        ax2.set_yticks([])
+
+    cbarax = fig2.add_subplot(gs2[1,:])
+    # divider = make_axes_locatable(cbarax)
+    # cax = divider.append_axes("right", size="5%", pad=0.05)
+    
+    # cbar = fig2.colorbar(mappable = mappable, cax = cbarax) # , fraction = 0.1)
+    cbar = fig2.colorbar(mappable = mappable, cax = cbarax, orientation = "horizontal") # , fraction = 0.1)
+
+    fig1.subplots_adjust(wspace=0.0, hspace = 0.0)
+    fig1.savefig("%s/gen%04d_top%02d_pheno_%s.jpg" % (args.datadir, generation_cnt, len(topinds), args.expsig), dpi = 300, bbox_inches="tight")
+    pl.close(fig1)
+    
+    fig2.subplots_adjust(wspace=0.0, hspace = 0.05)
+    fig2.savefig("%s/gen%04d_top%02d_geno__%s.jpg" % (args.datadir, generation_cnt, len(topinds), args.expsig), dpi = 300, bbox_inches="tight")
+    pl.close(fig2)
+    # pl.draw()
+    # pl.pause(1e-4)
+
 def main_es_vanilla(args):
     # evolution / opt params
     numgenerations = args.numgenerations
     numpopulation = args.numpopulation
     numsteps = args.numsteps
-    numelite = 1
+    numelite = args.numelite
 
+    setattr(args, "datadir", "ep3/ep3_es_vanilla_gen%s_meas%s_est%s_k%d_t%d_%s" % (args.generator, args.measure, args.estimator, args.measure_k, args.measure_tau, args.expsig))
+    os.mkdir(args.datadir)
+    
     # global logging structure: experiment configuration, generation data for all individuals and statistics
     experiment = {
         "conf": args,
@@ -588,12 +686,13 @@ def main_es_vanilla(args):
     # generations = []
 
     # complexity measure
-    cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau)
+    cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau, args.estimator)
 
     # array of parameter ndarray for the current generation
     newgen = []
     for j in range(numpopulation):
-        n, p = get_generator_params(args)
+        n, p, tau = get_generator_params(args)
+        # print("p.shape", p.shape)
         # n = Genet(2, 2)
         # newgen.append(n.M)
         # n = GenetPlast(2, 2)
@@ -605,16 +704,30 @@ def main_es_vanilla(args):
     pl.ion()
     fig = pl.figure(figsize = (20, 13))
     
-    gs = gridspec.GridSpec(4, 7 * numindplot)
+    # gs = gridspec.GridSpec(4, 7 * numindplot)
+    # gs = gridspec.GridSpec(5, 6 * numindplot)
+    gs = gridspec.GridSpec(4, 4 * numindplot + 1)
 
     allindaxes = []
     for i in range(numindplot):
         thisindaxes = []
-        thisindaxes.append(fig.add_subplot(gs[0:2, (i*7)       : (i * 7 + 3)]))
-        thisindaxes.append(fig.add_subplot(gs[0:2, (i * 7 + 3) : (i * 7 + 6)]))
-        thisindaxes.append(fig.add_subplot(gs[0:2, (i*7 + 6)]))
-        thisindaxes.append(fig.add_subplot(gs[2,   (i*7)       : ((i+1)*7)]))
-        thisindaxes.append(fig.add_subplot(gs[3,   (i*7)       : ((i+1)*7)]))
+        # thisindaxes.append(fig.add_subplot(gs[0:2, (i*7)       : (i * 7 + 3)]))
+        # thisindaxes.append(fig.add_subplot(gs[0:2, (i * 7 + 3) : (i * 7 + 6)]))
+        # thisindaxes.append(fig.add_subplot(gs[0:2, (i*7 + 6)]))
+        # thisindaxes.append(fig.add_subplot(gs[2,   (i*7)       : ((i+1)*7)]))
+        # thisindaxes.append(fig.add_subplot(gs[3,   (i*7)       : ((i+1)*7)]))
+        
+        # thisindaxes.append(fig.add_subplot(gs[0:2, (i*6)       : (i * 6 + 3)]))
+        # thisindaxes.append(fig.add_subplot(gs[0:2, (i * 6 + 3) : (i * 6 + 6)]))
+        # thisindaxes.append(fig.add_subplot(gs[2,   (i * 6 + 3) : (i * 6 + 6)]))
+        # thisindaxes.append(fig.add_subplot(gs[3,   (i*6)       : ((i+1)*6)]))
+        # thisindaxes.append(fig.add_subplot(gs[4,   (i*6)       : ((i+1)*6)]))
+
+        thisindaxes.append(fig.add_subplot(gs[0:2, (i*4)       : (i * 4 + 2)]))
+        thisindaxes.append(fig.add_subplot(gs[0:2, (i * 4 + 2) : (i * 4 + 4)]))
+        thisindaxes.append(fig.add_subplot(gs[0:2, -1]))
+        thisindaxes.append(fig.add_subplot(gs[2,   (i*4)       : ((i+1)*4)]))
+        thisindaxes.append(fig.add_subplot(gs[3,   (i*4)       : ((i+1)*4)]))
         allindaxes.append(thisindaxes)
     
     fig.show()
@@ -733,7 +846,7 @@ def main_es_vanilla(args):
         # save experiment progress
         # pickle.dump(generations, open("ep3/ep3_generations_%s.bin" % (args.expsig), "wb"))
         if k % 10 == 0:
-            pickle.dump(experiment, open("ep3/ep3_experiment_%s.bin" % (args.expsig), "wb"))
+            pickle.dump(experiment, open("%s/ep3_experiment_%s.bin" % (args.datadir, args.expsig), "wb"))
 
         fitprobs      = []
         fitprobs_rank = []
@@ -748,6 +861,7 @@ def main_es_vanilla(args):
         # print("fitprobs_rank", fitprobs_rank)
         # print("fitprobs", np.abs(fitprobs))
 
+        f2ax1.clear()
         f2ax1.plot(fitprobs, "k-o", alpha=0.2)
         f2ax1.plot(fitprobs_rank, "r-o", alpha=0.2)
         pl.draw()
@@ -783,15 +897,18 @@ def main_es_vanilla(args):
             newgen[i] = np.hstack((m1[:xover_at], m2[xover_at:])).reshape(sh_)
 
         # mutate all
-        for i in range(numpopulation):
+        for i in range(numpopulation * 3): # mutate more
+            i = i % numpopulation
             # mutate
             if np.random.uniform() < 0.3: # 05:
                 mut_idx = np.random.choice(np.prod(newgen[i].shape))
                 # print("mut_idx", mut_idx)
                 tmp_s = newgen[i].shape
                 tmp = newgen[i].flatten()
-                # n = np.random.normal(0, 0.1)
-                n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
+                if args.op_mutation == "normal":
+                    n = np.random.normal(0, 1.0)
+                elif args.op_mutation == "pareto":
+                    n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
                 # print("n", n, tmp[mut_idx])
                 newgen[i] = tmp.copy().reshape(tmp_s)
@@ -804,21 +921,31 @@ def main_es_vanilla(args):
             # for ind in generations[-1].values():
             numsteps_ = getattr(args, "numsteps")
             setattr(args, "numsteps", 1000)
+            topinds = []
             for i,ind in enumerate(sorted_x):
                 if i >= (numpopulation - 5):
                     # test_ind(args = args, M = ind[1]["M"], fig = fig, axes = [ax1, ax2, ax3, ax4, ax4cb])
-                    test_ind(args = args, M = ind[1]["M"], fig = fig, axes = allindaxes[i - (numpopulation - numindplot)])
-                print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
+                    H2D, pi, ais = test_ind(args = args, M = ind[1]["M"], fig = fig, axes = allindaxes[i - (numpopulation - numindplot)])
+                    # save_ind(args, )
+                    topinds.append({"M": ind[1]["M"], "H2D": H2D, "pi": pi, "ais": ais})
+                # print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
+            save_topinds(topinds, args, k)
             setattr(args, "numsteps", numsteps_)
             
     pl.ioff()
     pl.show()
     if args.plotsave:
-        pl.gcf().savefig("ep3_es_vanilla_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
+        fig.savefig("ep3_es_vanilla_top5_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
+        fig2.savefig("ep3_es_vanilla_stats_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
+        fig3.savefig("ep3_es_vanilla_prob_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
     # pl.pause(100)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("-om", "--op_mutation", type=str, default="pareto",
+                        help="Mutation operator noise type [pareto]")
+    parser.add_argument("-e", "--estimator", type=str, default="kraskov1",
+                        help="Type of estimator to use with JIDT [kraskov1].")
     parser.add_argument("-g", "--generator", type=str, default="basic",
                         help="Type of generator [basic]. This is the structure whose parameters we want to evolve.")
     parser.add_argument("-j", "--jarloc_jidt", type=str, default="/home/src/QK/infodynamics-dist/infodynamics.jar",
@@ -833,6 +960,8 @@ if __name__ == "__main__":
                         help="Complexity measure embedding delay [1]")
     parser.add_argument("-n", "--numsteps", type=int, default=1000,
                         help="number of timesteps for individual evaluation [1000]")
+    parser.add_argument("-ne", "--numelite", type=int, default=1,
+                        help="Extent of elitism, how many best individuals to transfer unmodified [1]")
     parser.add_argument("-ng", "--numgenerations", type=int, default=100,
                         help="number of generations to evolve for [100]")
     parser.add_argument("-np", "--numpopulation", type=int, default=20,

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 # producing network / generator / autonomous
 class Genet(object):
-    def __init__(self, modelsize = 2, state_dim = 2, M = None):
+    def __init__(self, modelsize = 2, state_dim = 2, M = None, tau = None):
         # self.modelsize = modelsize
         self.state_dim = state_dim + 1 # bias
 
@@ -32,11 +32,16 @@ class Genet(object):
         self.nonlin = np.tanh
 
         # leak factor
-        self.leak = 0.5
+        # if tau is not None:
+        #     netw["tau"] = tau
+        # else:
+        #     netw["tau"] = 1 - np.power(np.random.uniform(0, 1, size=netw["x"].shape), 2)
+        netw["tau"] = 0.5
+        # print("tau", netw["tau"])
 
     def step(self):
         netw = self.networks["fast"]
-        netw["x"] = self.leak * netw["x"] + (1 - self.leak) * (np.dot(netw["M"], netw["x"]))
+        netw["x"] = netw["tau"] * netw["x"] + (1 - netw["tau"]) * (np.dot(netw["M"], netw["x"]))
         netw["x"] = self.nonlin(netw["x"]) + np.random.normal(0, 1e-3, netw["x"].shape)
         
 class GenetPlast(Genet):
@@ -67,7 +72,7 @@ class GenetPlast(Genet):
         self.networks["slow"]["i_dim"] = self.networks["slow"]["s_dim"] + self.state_dim
         # slow network transition matrix
         if M is None:
-            self.networks["slow"]["M"] = np.random.uniform(-1, 1, (self.networks["slow"]["s_dim"], self.networks["slow"]["i_dim"])) * 0.005
+            self.networks["slow"]["M"] = np.random.uniform(-1, 1, (self.networks["slow"]["s_dim"], self.networks["slow"]["i_dim"])) * 0.5 # 0.005
         else:
             self.networks["slow"]["M"] = M
             
