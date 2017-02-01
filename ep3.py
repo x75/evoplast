@@ -3,7 +3,7 @@
 # their weights towards a "complexity" objective: ES, CMA-ES, hyperopt
 
 # TODO
-#  - complete logging + storage of experiment
+#  - complete logging + storage of experiment, including genotype, timeseries (phenotype), parameters
 #  - sample and plot catalogue of phylogenetic history
 #  - different esstimators: kernel, kraskov, ...
 #  - different measures: TE / AIS / literature
@@ -12,10 +12,15 @@
 #  - ES: compare fitness/generation curves for gaussian and pareto noise
 
 # FIXME:
-#  1 - check base network dynamics
+#  1 - check base network dynamics: moved to ep4
 #  2 - average over multiple runs per individual
-#  3 - ensure diversity
+#  3 - ensure / encourage diversity: novelty, genotype distance, behaviour distance (overlap of 2d space covered, same without phase information)
 #  4 - proper selection, xover, mut operators
+# params: which selection, xover points, 
+# evolve: tau, tau_s, state_dim
+# add additional states to fast/slow combi
+
+# DONE
 #  found error: newgen wasn't properly used but overwritten by random configuration
 
 from __future__ import print_function
@@ -463,7 +468,7 @@ def main_cma_es(args):
     print("args", args)
     # options = {'CMA_diagonal':100, 'seed':1234, 'verb_time':0, "maxfevals": 2000}
     # options = {'CMA_diagonal': 0, 'seed':32984, 'verb_time':0, "maxfevals": 2000}
-    options = {'CMA_diagonal': 0, 'seed':4534985, 'verb_time':0, "maxfevals": 4000}
+    options = {'CMA_diagonal': 0, 'seed':4534985, 'verb_time':0, "maxfevals": 4000, "termination_callback": None}
 
     hparams = {
         "numsteps": args.numsteps,
@@ -598,6 +603,10 @@ def main_es_vanilla(args):
     
     fig.show()
     # pl.draw()
+
+    fig2 = pl.figure(figsize = (10, 6))
+    f2ax1 = fig2.add_subplot(111)
+    fig2.show()
     
     # loop over generations
     for k in range(numgenerations):
@@ -673,20 +682,30 @@ def main_es_vanilla(args):
         # for minimization of neg loss
         sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
 
-        fitprobs = []
-        for idx, ind in sorted_x:
-            # print("idx", idx, "ind", ind)
+        fitprobs      = []
+        fitprobs_rank = []
+        for i, (idx, ind) in enumerate(sorted_x):
+            # print("i", i, "idx", idx) # , "ind", ind)
             fitprobs.append(ind["loss"])
+            fitprobs_rank.append((2 * numpopulation) - i)
         fitprobs = np.sqrt(np.abs(np.array(fitprobs)))
+        fitprobs_rank = np.sqrt(np.array(fitprobs_rank, dtype=float))
         fitprobs /= np.sum(fitprobs)
+        fitprobs_rank /= np.sum(fitprobs_rank)
+        # print("fitprobs_rank", fitprobs_rank)
         # print("fitprobs", np.abs(fitprobs))
+
+        f2ax1.plot(fitprobs, "k-o", alpha=0.2)
+        f2ax1.plot(fitprobs_rank, "r-o", alpha=0.2)
+        pl.draw()
+        pl.pause(1e-3)
 
         # print("sample fitprobs", argsample(fitprobs))
                     
         # print("sorted_x", sorted_x[:]["loss"])
         # print(sorted_x[0][1])
         newgen[0] = sorted_x[0][1]["M"]
-        for i in range(1, numpopulation):
+        for i in range(0, numpopulation):
             # select
             # 1: sample weighted by fitness
             c = argsample(fitprobs)[0]
@@ -695,8 +714,10 @@ def main_es_vanilla(args):
             # c = np.random.choice(min(numpopulation, 15))# make tournament or something
             newgen[i] = sorted_x[c][1]["M"]
 
-            c1 = argsample(fitprobs)[0]
-            c2 = argsample(fitprobs)[0]
+            # c1 = argsample(fitprobs)[0]
+            # c2 = argsample(fitprobs)[0]
+            c1 = argsample(fitprobs_rank)[0]
+            c2 = argsample(fitprobs_rank)[0]
             sh_ = sorted_x[c1][1]["M"].shape
             m1 = sorted_x[c1][1]["M"].flatten()
             m2 = sorted_x[c2][1]["M"].flatten()

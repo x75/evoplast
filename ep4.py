@@ -60,7 +60,7 @@ class GenetPlast(Genet):
         self.networks["fast"]["M"] = np.random.uniform(-1e-2, 1e-2, (self.state_dim, self.state_dim))
 
         # fast network timescale
-        self.networks["slow"]["tau"] = 0.99 # 0.8 # 0.96
+        self.networks["slow"]["tau"] = 0.8 # 0.99 # 0.8 # 0.96
         # slow network state dim
         self.networks["slow"]["s_dim"] = np.prod(self.networks["fast"]["M"].shape)
         # slow network input dim
