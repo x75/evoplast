@@ -897,21 +897,22 @@ def main_es_vanilla(args):
             newgen[i] = np.hstack((m1[:xover_at], m2[xover_at:])).reshape(sh_)
 
         # mutate all
-        for i in range(numpopulation * 3): # mutate more
+        for i in range(numpopulation * 2): # mutate more
             i = i % numpopulation
             # mutate
-            if np.random.uniform() < 0.3: # 05:
+            if np.random.uniform() < 0.25: # 05:
                 mut_idx = np.random.choice(np.prod(newgen[i].shape))
+                ind_idx = np.random.choice(numpopulation)
                 # print("mut_idx", mut_idx)
-                tmp_s = newgen[i].shape
-                tmp = newgen[i].flatten()
+                tmp_s = newgen[ind_idx].shape
+                tmp = newgen[ind_idx].flatten()
                 if args.op_mutation == "normal":
                     n = np.random.normal(0, 1.0)
                 elif args.op_mutation == "pareto":
                     n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
                 # print("n", n, tmp[mut_idx])
-                newgen[i] = tmp.copy().reshape(tmp_s)
+                newgen[ind_idx] = tmp.copy().reshape(tmp_s)
 
         # do some online plotting
         if k % args.plotinterval == 0:
