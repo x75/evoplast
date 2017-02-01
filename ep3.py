@@ -377,7 +377,7 @@ def objective(params, hparams):
     }
         
     pi = 0
-    for i in range(5):
+    for i in range(args.numevalind):
         Xs = evaluate_individual(conf)
         
         Xs_meas = Xs[:,[1,2]]
@@ -386,7 +386,7 @@ def objective(params, hparams):
         # pi = cm.compute_ais(Xs)
         # pi = cm.compute_pi_local(Xs)
         pi += cm.compute(Xs_meas)
-    pi /= 5.0
+    pi /= float(args.numevalind)
     pi = max(0, pi) + 1e-9
     # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
@@ -672,7 +672,7 @@ def main_es_vanilla(args):
     numsteps = args.numsteps
     numelite = args.numelite
 
-    setattr(args, "datadir", "ep3/ep3_es_vanilla_gen%s_meas%s_est%s_k%d_t%d_%s" % (args.generator, args.measure, args.estimator, args.measure_k, args.measure_tau, args.expsig))
+    setattr(args, "datadir", "ep3/ep3_es_vanilla_gen%s_meas%s_est%s_k%d_t%d_op_mut%s_%s" % (args.generator, args.measure, args.estimator, args.measure_k, args.measure_tau, args.op_mutation, args.expsig))
     os.mkdir(args.datadir)
     
     # global logging structure: experiment configuration, generation data for all individuals and statistics
@@ -733,10 +733,12 @@ def main_es_vanilla(args):
     fig.show()
     # pl.draw()
 
+    # selection probs
     fig2 = pl.figure(figsize = (10, 6))
     f2ax1 = fig2.add_subplot(111)
     fig2.show()
 
+    # fitness stats
     fig3 = pl.figure(figsize = (10, 6))
     f3ax1 = fig3.add_subplot(111)
     fig3.show()
@@ -932,6 +934,7 @@ def main_es_vanilla(args):
                 # print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
             save_topinds(topinds, args, k)
             setattr(args, "numsteps", numsteps_)
+            fig2.savefig("ep3_es_vanilla_stats_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
             
     pl.ioff()
     pl.show()
@@ -963,6 +966,8 @@ if __name__ == "__main__":
                         help="number of timesteps for individual evaluation [1000]")
     parser.add_argument("-ne", "--numelite", type=int, default=1,
                         help="Extent of elitism, how many best individuals to transfer unmodified [1]")
+    parser.add_argument("-nei", "--numevalind", type=int, default=1,
+                        help="How often to eval an individual for statistics [1]")
     parser.add_argument("-ng", "--numgenerations", type=int, default=100,
                         help="number of generations to evolve for [100]")
     parser.add_argument("-np", "--numpopulation", type=int, default=20,
