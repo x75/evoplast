@@ -6,10 +6,11 @@
 #  - complete logging + storage of experiment, including genotype, timeseries (phenotype), parameters
 #  - sample and plot catalogue of phylogenetic history
 #  - different esstimators: kernel, kraskov, ...
-#  - different measures: TE / AIS / literature
+#  - different measures: TE / AIS / lyapunov / recurrence plot / literature
 #  - ES / CMA-ES / hyperopt
 #  - CPPN, HyperNeat and Map syn/mod composite network
 #  - ES: compare fitness/generation curves for gaussian and pareto noise
+#  - more precise modulation
 
 # FIXME:
 #  1 - check base network dynamics: moved to ep4
@@ -230,7 +231,8 @@ def test_ind(args, M = None, fig = None, axes = None):
     ais  = cm.compute_ais(Xs_meas)
     # pi_l  = cm.compute_pi_local(Xs_meas)
 
-    ax1, ax2, ax3, ax4, ax4cb = axes
+    # ax1, ax2, ax3, ax4, ax4cb = axes
+    ax1, ax4, ax4cb, ax2, ax3 = axes
         
     ax1.clear()
     ax1.plot(Xs[:,1], Xs[:,2], "k-o", alpha=0.1)
@@ -310,7 +312,7 @@ def objective(params, hparams):
     M = np.array(params[0:(rows*cols)]).reshape((rows,cols))
     
     # a dict containg network config, timeseries, loss
-    experiment = dict()
+    rundata = dict()
     
     # #  create network
     # # n = Genet(2, 2)
@@ -350,7 +352,7 @@ def objective(params, hparams):
 
     status = STATUS_OK
     # return structure: params, timeseries, scalar loss
-    experiment = {
+    rundata = {
         "loss": loss, # compute_complexity(Xs)
         "status": status, # compute_complexity(Xs)
         "M": M, # n.networks["fast"]["M"],
@@ -358,9 +360,9 @@ def objective(params, hparams):
         # "loss": np.var(Xs),
     }
     if hparams["continuous"]:
-        return experiment["loss"]
+        return rundata["loss"]
     else:
-        return experiment
+        return rundata
 
 def objective_double(params, hparams):
     """evaluate an individual (parameter set) with respect to given objective"""
@@ -378,7 +380,7 @@ def objective_double(params, hparams):
     M = np.array(params).reshape((9,12))
     
     # a dict containg network config, timeseries, loss
-    experiment = dict()
+    rundata = dict()
     
     # #  create network
     # # n = Genet(2, 2)
@@ -420,7 +422,7 @@ def objective_double(params, hparams):
     # loss = -np.log(pi)
     loss = -pi
     # return structure: params, timeseries, scalar loss
-    experiment = {
+    rundata = {
         "loss": loss, # compute_complexity(Xs)
         "status": STATUS_OK, # compute_complexity(Xs)
         "M": M, # n.networks["slow"]["M"], # n.M
@@ -428,9 +430,9 @@ def objective_double(params, hparams):
         # "loss": np.var(Xs),
     }
     if hparams["continuous"]:
-        return experiment["loss"]
+        return rundata["loss"]
     else:
-        return experiment
+        return rundata
 
 def main(args):
     """main, just dispatch to mode's main"""
@@ -573,9 +575,17 @@ def main_es_vanilla(args):
     numgenerations = args.numgenerations
     numpopulation = args.numpopulation
     numsteps = args.numsteps
+    numelite = 1
 
-    # generations array containing
-    generations = []
+    # global logging structure: experiment configuration, generation data for all individuals and statistics
+    experiment = {
+        "conf": args,
+        "generations": [],
+        "generations_stats": [],
+    }
+    
+    # # generations array containing
+    # generations = []
 
     # complexity measure
     cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau)
@@ -589,17 +599,23 @@ def main_es_vanilla(args):
         # n = GenetPlast(2, 2)
         # newgen.append(n.networks["slow"]["M"])
         newgen.append(p)
-    
 
+    numindplot = 5
+        
     pl.ion()
-    fig = pl.figure(figsize = (16, 14))
-    gs = gridspec.GridSpec(3, 5)
+    fig = pl.figure(figsize = (20, 13))
+    
+    gs = gridspec.GridSpec(4, 7 * numindplot)
 
-    ax1 = fig.add_subplot(gs[0,:2])
-    ax2 = fig.add_subplot(gs[1,:])
-    ax3 = fig.add_subplot(gs[2,:])
-    ax4 = fig.add_subplot(gs[0,2:4])
-    ax4cb = fig.add_subplot(gs[0,4])
+    allindaxes = []
+    for i in range(numindplot):
+        thisindaxes = []
+        thisindaxes.append(fig.add_subplot(gs[0:2, (i*7)       : (i * 7 + 3)]))
+        thisindaxes.append(fig.add_subplot(gs[0:2, (i * 7 + 3) : (i * 7 + 6)]))
+        thisindaxes.append(fig.add_subplot(gs[0:2, (i*7 + 6)]))
+        thisindaxes.append(fig.add_subplot(gs[2,   (i*7)       : ((i+1)*7)]))
+        thisindaxes.append(fig.add_subplot(gs[3,   (i*7)       : ((i+1)*7)]))
+        allindaxes.append(thisindaxes)
     
     fig.show()
     # pl.draw()
@@ -607,7 +623,11 @@ def main_es_vanilla(args):
     fig2 = pl.figure(figsize = (10, 6))
     f2ax1 = fig2.add_subplot(111)
     fig2.show()
-    
+
+    fig3 = pl.figure(figsize = (10, 6))
+    f3ax1 = fig3.add_subplot(111)
+    fig3.show()
+        
     # loop over generations
     for k in range(numgenerations):
         # arrays of individuals each element of which is
@@ -635,12 +655,12 @@ def main_es_vanilla(args):
             params = newgen[j].tolist()
 
             # evaluate individual
-            # experiment = objective(params, hparams)
-            experiment = pobjective(params)
+            # rundata = objective(params, hparams)
+            rundata = pobjective(params)
 
             # store results for indidividual
-            # population.append(experiment)
-            population["%d" % j] = experiment
+            # population.append(rundata)
+            population["%d" % j] = rundata
 
             # pl.subplot(411)
             # pl.plot(Xs[:,0], Xs[:,1], "k-o", alpha=0.1)
@@ -660,16 +680,38 @@ def main_es_vanilla(args):
         # pl.cla()
 
         ind_loss = np.array([ind["loss"] for ind in population.values()])
-        avg_fit = np.mean(ind_loss)
-        std_fit = np.std(ind_loss)
-        max_fit = np.max(ind_loss)
-        min_fit = np.min(ind_loss)
-        print("gen %04d: max fit = %f, avg/std fit = %f/%f, min fit = %f, " % (k, max_fit, avg_fit, std_fit, min_fit))
+        generation_stats = {
+            "avg_fit": np.mean(ind_loss),
+            "std_fit": np.std(ind_loss),
+            "max_fit": np.max(ind_loss),
+            "min_fit": np.min(ind_loss),
+        }
+        print("gen %04d: max fit = %f, avg/std fit = %f/%f, min fit = %f, " % (k, generation_stats["max_fit"], generation_stats["avg_fit"],
+                                                                               generation_stats["std_fit"], generation_stats["min_fit"]))
+        experiment["generations_stats"].append(generation_stats)
 
-        generations.append(population)
-
-        # save experiment progress
-        pickle.dump(generations, open("ep3/ep3_generations_%s.bin" % (args.expsig), "wb"))
+        avgf = []
+        stdf = []
+        maxf = []
+        minf = []
+        for gs in experiment["generations_stats"]:
+            avgf.append(gs["avg_fit"])
+            stdf.append(gs["std_fit"])
+            maxf.append(gs["max_fit"])
+            minf.append(gs["min_fit"])
+        avgf = np.array(avgf)
+        stdf = np.array(stdf)
+        maxf = np.array(maxf)
+        minf = np.array(minf)
+        f3ax1.clear()
+        f3ax1.plot(minf, "yo", alpha=0.5, label="min")
+        f3ax1.plot(maxf, "ko", alpha=0.5, label="max")
+        f3ax1.plot(avgf, "ro", alpha=0.5, label="avg")
+        f3ax1.plot(avgf + stdf, "go", alpha=0.5, label="+sigma")
+        f3ax1.plot(avgf - stdf, "go", alpha=0.5, label="-sigma")
+        f3ax1.legend()
+        pl.draw()
+        pl.pause(1e-3)
 
         # generate new generation from loss sorted current generation
         # get best n individuals (FIXME: use a dataframe)
@@ -680,7 +722,18 @@ def main_es_vanilla(args):
         # for maximization
         # sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
         # for minimization of neg loss
-        sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
+        # sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=False)
+        sorted_x = sorted(population.items(), key=lambda x: x[1]["loss"], reverse=False)
+
+        # store current generation
+        # generations.append(population)
+        experiment["generations"].append(population)
+        # generations.append(sorted_x)
+
+        # save experiment progress
+        # pickle.dump(generations, open("ep3/ep3_generations_%s.bin" % (args.expsig), "wb"))
+        if k % 10 == 0:
+            pickle.dump(experiment, open("ep3/ep3_experiment_%s.bin" % (args.expsig), "wb"))
 
         fitprobs      = []
         fitprobs_rank = []
@@ -704,8 +757,13 @@ def main_es_vanilla(args):
                     
         # print("sorted_x", sorted_x[:]["loss"])
         # print(sorted_x[0][1])
-        newgen[0] = sorted_x[0][1]["M"]
-        for i in range(0, numpopulation):
+        
+        # do elite backup
+        for i in range(numelite):
+            newgen[i] = sorted_x[i][1]["M"]
+
+        # do non-elite new population
+        for i in range(numelite, numpopulation):
             # select
             # 1: sample weighted by fitness
             c = argsample(fitprobs)[0]
@@ -714,16 +772,18 @@ def main_es_vanilla(args):
             # c = np.random.choice(min(numpopulation, 15))# make tournament or something
             newgen[i] = sorted_x[c][1]["M"]
 
-            # c1 = argsample(fitprobs)[0]
-            # c2 = argsample(fitprobs)[0]
-            c1 = argsample(fitprobs_rank)[0]
-            c2 = argsample(fitprobs_rank)[0]
+            c1 = argsample(fitprobs)[0]
+            c2 = argsample(fitprobs)[0]
+            # c1 = argsample(fitprobs_rank)[0]
+            # c2 = argsample(fitprobs_rank)[0]
             sh_ = sorted_x[c1][1]["M"].shape
             m1 = sorted_x[c1][1]["M"].flatten()
             m2 = sorted_x[c2][1]["M"].flatten()
             xover_at = np.random.randint(m1.shape[0])
             newgen[i] = np.hstack((m1[:xover_at], m2[xover_at:])).reshape(sh_)
-            
+
+        # mutate all
+        for i in range(numpopulation):
             # mutate
             if np.random.uniform() < 0.3: # 05:
                 mut_idx = np.random.choice(np.prod(newgen[i].shape))
@@ -735,27 +795,19 @@ def main_es_vanilla(args):
                 tmp[mut_idx] += n
                 # print("n", n, tmp[mut_idx])
                 newgen[i] = tmp.copy().reshape(tmp_s)
-                
-            # # crossover
-            # if np.random.uniform() < 0.01:
-            #     mut_idx = np.random.choice(np.prod(newgen[i].shape))
-            #     print("mut_idx", mut_idx)
-            #     tmp_s = newgen[i].shape
-            #     tmp = newgen[i].flatten()
-            #     tmp[mut_idx] += np.random.normal(0, 0.05)
-            #     newgen[i] = tmp.reshape(tmp_s)
-                
-        # print("sorted_x", sorted_x)
 
-        if k % args.plotinterval == 0:        
+        # do some online plotting
+        if k % args.plotinterval == 0:
             # print("generations", generations[-1])
-            sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
+            # sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
+            sorted_x = sorted(experiment["generations"][-1].items(), key=lambda x: x[1]["loss"], reverse=True)
             # for ind in generations[-1].values():
             numsteps_ = getattr(args, "numsteps")
             setattr(args, "numsteps", 1000)
             for i,ind in enumerate(sorted_x):
                 if i >= (numpopulation - 5):
-                    test_ind(args = args, M = ind[1]["M"], fig = fig, axes = [ax1, ax2, ax3, ax4, ax4cb])
+                    # test_ind(args = args, M = ind[1]["M"], fig = fig, axes = [ax1, ax2, ax3, ax4, ax4cb])
+                    test_ind(args = args, M = ind[1]["M"], fig = fig, axes = allindaxes[i - (numpopulation - numindplot)])
                 print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
             setattr(args, "numsteps", numsteps_)
             
