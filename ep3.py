@@ -903,7 +903,7 @@ def main_es_vanilla(args):
             newgen[i] = np.hstack((m1[:xover_at], m2[xover_at:])).reshape(sh_)
 
         # mutate all
-        for i in range(int(numpopulation * 1.2)): # mutate more
+        for i in range(numelite, int(numpopulation * 1.2)): # mutate more
             i = i % numpopulation
             # mutate
             if np.random.uniform() < 0.25: # 05:
@@ -938,14 +938,14 @@ def main_es_vanilla(args):
                 # print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
             save_topinds(topinds, args, k)
             setattr(args, "numsteps", numsteps_)
-            fig2.savefig("ep3_es_vanilla_stats_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
+            fig2.savefig("%s/ep3_es_vanilla_stats_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
             
     pl.ioff()
     pl.show()
     if args.plotsave:
-        fig.savefig("ep3_es_vanilla_top5_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
-        fig2.savefig("ep3_es_vanilla_stats_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
-        fig3.savefig("ep3_es_vanilla_prob_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
+        fig.savefig("%s/ep3_es_vanilla_top5_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
+        fig2.savefig("%s/ep3_es_vanilla_stats_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
+        fig3.savefig("%s/ep3_es_vanilla_prob_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
     # pl.pause(100)
 
 if __name__ == "__main__":
