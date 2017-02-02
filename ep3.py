@@ -29,7 +29,7 @@
 
 from __future__ import print_function
 
-import pickle, time, argparse, os
+import pickle, time, argparse, os, sys
 from functools import partial, reduce
 import numpy as np
 import pylab as pl
@@ -377,7 +377,7 @@ def objective(params, hparams):
     }
         
     pi = 0
-    for i in range(args.numevalind):
+    for i in range(args.numindeval):
         Xs = evaluate_individual(conf)
         
         Xs_meas = Xs[:,[1,2]]
@@ -386,7 +386,7 @@ def objective(params, hparams):
         # pi = cm.compute_ais(Xs)
         # pi = cm.compute_pi_local(Xs)
         pi += cm.compute(Xs_meas)
-    pi /= float(args.numevalind)
+    pi /= float(args.numindeval)
     pi = max(0, pi) + 1e-9
     # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
@@ -476,6 +476,83 @@ def objective_double(params, hparams):
     else:
         return rundata
 
+def create_args_expr(args):
+    # global logging structure: experiment configuration, generation data for all individuals and statistics
+    experiment = {
+        "conf": args,
+        "generations": [],
+        "generations_stats": [],
+    }
+
+    # complexity measure
+    cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau, args.estimator)
+
+    # objective function common params
+    hparams = {
+        "numsteps": args.numsteps,
+        "measure": cm,
+        "continuous": False,
+    }
+
+    return (experiment, hparams, cm)
+
+def create_args_plot(args):
+    
+    # set interactive mode
+    pl.ion()
+
+    # main figure
+    fig1 = pl.figure(figsize = (20, 13))
+    fig1.suptitle("%s top of generation x/y, params, timeseries" % (args.datadir))
+    
+    # gs = gridspec.GridSpec(4, 7 * args.numindplot)
+    # gs = gridspec.GridSpec(5, 6 * args.numindplot)
+    gs = gridspec.GridSpec(4, 4 * args.numindplot + 1)
+
+    fig1axes = []
+    for i in range(args.numindplot):
+        thisindaxes = []
+        # thisindaxes.append(fig1.add_subplot(gs[0:2, (i*7)       : (i * 7 + 3)]))
+        # thisindaxes.append(fig1.add_subplot(gs[0:2, (i * 7 + 3) : (i * 7 + 6)]))
+        # thisindaxes.append(fig1.add_subplot(gs[0:2, (i*7 + 6)]))
+        # thisindaxes.append(fig1.add_subplot(gs[2,   (i*7)       : ((i+1)*7)]))
+        # thisindaxes.append(fig1.add_subplot(gs[3,   (i*7)       : ((i+1)*7)]))
+        
+        # thisindaxes.append(fig1.add_subplot(gs[0:2, (i*6)       : (i * 6 + 3)]))
+        # thisindaxes.append(fig1.add_subplot(gs[0:2, (i * 6 + 3) : (i * 6 + 6)]))
+        # thisindaxes.append(fig1.add_subplot(gs[2,   (i * 6 + 3) : (i * 6 + 6)]))
+        # thisindaxes.append(fig1.add_subplot(gs[3,   (i*6)       : ((i+1)*6)]))
+        # thisindaxes.append(fig1.add_subplot(gs[4,   (i*6)       : ((i+1)*6)]))
+
+        thisindaxes.append(fig1.add_subplot(gs[0:2, (i*4)       : (i * 4 + 2)]))
+        thisindaxes.append(fig1.add_subplot(gs[0:2, (i * 4 + 2) : (i * 4 + 4)]))
+        thisindaxes.append(fig1.add_subplot(gs[0:2, -1]))
+        thisindaxes.append(fig1.add_subplot(gs[2,   (i*4)       : ((i+1)*4)]))
+        thisindaxes.append(fig1.add_subplot(gs[3,   (i*4)       : ((i+1)*4)]))
+        fig1axes.append(thisindaxes)
+    
+    fig1.show()
+    # pl.draw()
+
+    # selection probs
+    fig2 = pl.figure(figsize = (10, 6))
+    fig2.suptitle("%s selection probs" % (args.datadir))
+    f2ax1 = fig2.add_subplot(111)
+    fig2.show()
+
+    # fitness stats
+    fig3 = pl.figure(figsize = (10, 6))
+    fig3.suptitle("%s fitness stats" % (args.datadir))
+    f3ax1 = fig3.add_subplot(111)
+    fig3.show()
+
+    # return dict with figure data
+    return {
+        "fig1": {"fig": fig1, "axes": fig1axes},
+        "fig2": {"fig": fig2, "axes": f2ax1},
+        "fig3": {"fig": fig3, "axes": f3ax1}
+    }
+    
 def main(args):
     """main, just dispatch to mode's main"""
 
@@ -484,26 +561,43 @@ def main(args):
     
     # experiment signature
     setattr(args, "expsig", time.strftime("%Y%m%d-%H%M%S"))
+
+    # data directory for this run
+    setattr(args, "datadir", "ep3/ep3_mode%s_gen%s_meas%s_est%s_k%d_t%d_op_mut%s_%s" % (args.mode, args.generator,
+        args.measure, args.estimator, args.measure_k, args.measure_tau, args.op_mutation, args.expsig))
+    try:
+        print("Creating directory %s" % (args.datadir))
+        os.mkdir(args.datadir)
+    except Exception:
+        print("Failed creating directory %s" % (args.datadir))
+        sys.exit(1)
+
+    # get additional experiment configuration
+    args_expr = create_args_expr(args)
+
+    # get plotting configuration
+    args_plot = create_args_plot(args)
     
+    # mode dispatch
     if args.mode == "es_vanilla":
-        main_es_vanilla(args)
+        main_es_vanilla(args, args_expr, args_plot)
     elif args.mode == "cma_es":
         main_cma_es(args)
     elif args.mode == "hp_tpe":
         setattr(args, "suggest", tpe.suggest)
-        main_hp(args)
+        main_hp(args, args_expr, args_plot)
     elif args.mode == "hp_random_search":
         setattr(args, "suggest", rand.suggest)
-        main_hp(args)
+        main_hp(args, args_expr, args_plot)
     elif args.mode == "hp_anneal":
         setattr(args, "suggest", anneal.suggest)
-        main_hp(args)
+        main_hp(args, args_expr, args_plot)
     elif args.mode == "hp_gp_ucb":
         setattr(args, "suggest", partial(suggest_algos.ucb, stop_at=1e-0))
-        main_hp(args)
+        main_hp(args, args_expr, args_plot)
     elif args.mode == "hp_gp_ei":
         setattr(args, "suggest", partial(suggest_algos.ei, stop_at=1e-0))
-        main_hp(args)
+        main_hp(args, args_expr, args_plot)
     elif args.mode == "test_ind":
         test_ind(args)
 
@@ -533,13 +627,19 @@ def main_cma_es(args):
     print("result cma_es", res[0], res[1])
     return res[0]
 
-def main_hp(args):
+def main_hp(args, args_expr, args_plot):
       
-    hparams = {
-        "numsteps": args.numsteps,
-        "measure": ComplexityMeasure(),
-        "continuous": False,
-    }
+    # expand additional experiment configuration
+    experiment, hparams, cm = args_expr
+
+    # expand plotting arguments
+    fig1 = args_plot["fig1"]["fig"]
+    fig1axes = args_plot["fig1"]["axes"]
+    fig2  = args_plot["fig2"]["fig"]
+    f2ax1 = args_plot["fig2"]["axes"]
+    fig3  = args_plot["fig3"]["fig"]
+    f3ax1 = args_plot["fig3"]["axes"]
+    
     obj = get_obj(args)
     pobjective = partial(obj, hparams=hparams)
     # pobjective = partial(objective, hparams=hparams)
@@ -559,7 +659,9 @@ def main_hp(args):
         print("feval took %f s with ret = %f" % (took, ret["loss"]))
         return ret
 
-    space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(p.size)]
+    
+    # space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(p.size)]
+    space = [hp.uniform("m%d" % i, -10.0, 10.0) for i in range(p.size)]
 
     trials = Trials()
     suggest = args.suggest # tpe.suggest # something
@@ -577,7 +679,39 @@ def main_hp(args):
                     trials=trials,
                     verbose=1))
         lrstate = np.random.RandomState()
-        print("fmin iter %d with loss %s" % (i, bests[-1]))
+        print("fmin iter %d with loss %s" % (i, trials.losses()[-1])) # bests[-1]))
+
+        # logging / plotting
+        ind_loss = trials.losses()
+        generation_stats = {
+            "avg_fit": trials.losses()[-1],
+            "std_fit": 0, #np.std(ind_loss),
+            "max_fit": np.max(ind_loss),
+            "min_fit": np.min(ind_loss),
+        }
+        experiment["generations_stats"].append(generation_stats)
+        
+        # plot fitness stats for generation k
+        plot_fitness_stats(args, experiment, f3ax1)
+
+        if i >= args.numpopulation:
+            print("trials.losses() = %s" % (trials.losses()))
+            population = dict()
+            si = np.argsort(np.array(trials.losses()))
+            for j in range(args.numpopulation):
+                population["%d" % j] = trials.results[si[j]]
+                
+            #     population["%d" % j] = trials.results[j_trials]
+            # for j,j_trials in enumerate(range(i, max(0, i - args.numpopulation), -1)):
+            #     population["%d" % j] = trials.results[j_trials]
+        
+            experiment["generations"].append(population)
+
+            # plot status
+            plot_status(args, i, experiment, fig1, fig1axes, fig3)
+        
+    # print("trials.trials = %s" % (trials.trials[0].keys()))
+    # print("trials.results = %s" % (trials.results))
 
     best = bests[-1]
     for i in range(5):
@@ -591,6 +725,8 @@ def main_hp(args):
         # print(k)
         ret[i] = best[k]
         
+    plot_cleanup(args, fig1, fig2, fig3)
+    
     return ret
 
 def get_generator(args):
@@ -632,9 +768,11 @@ def save_topinds(topinds, args, generation_cnt = 0):
     # fig1.suptitle("%s @generation[%d] x/y" % (args.datadir, generation_cnt))
     fig2 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
     # fig2.suptitle("%s @generation[%d] params" % (args.datadir, generation_cnt))
+    fig3 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
     # fig.show()
     gs1 = gridspec.GridSpec(1, len(topinds) * 1)
     gs2 = gridspec.GridSpec(2, len(topinds) * 1, height_ratios = [0.95, 0.05]) # + 1, width_ratios = [1] * len(topinds) + [0.1])
+    gs3 = gridspec.GridSpec(2, len(topinds) * 1)
 
     for i, topind in enumerate(topinds):
         ax1 = fig1.add_subplot(gs1[0,i])
@@ -654,6 +792,16 @@ def save_topinds(topinds, args, generation_cnt = 0):
         ax2.set_xticks([])
         ax2.set_yticks([])
 
+        ax3 = fig3.add_subplot(gs3[0,i])
+        ax3.plot(topind["H2D"][:,1], "k-,", alpha=0.33)
+        ax3.set_xticks([])
+        ax3.set_yticks([-1, 0, 1])
+        ax4 = fig3.add_subplot(gs3[1,i])
+        ax4.plot(topind["H2D"][:,2], "k-,", alpha=0.33)
+        ax4.set_xticks(np.linspace(0, topind["H2D"].shape[0], 5))
+        ax4.set_yticks([-1, 0, 1])
+        ax4.set_xlabel("t")
+        
     cbarax = fig2.add_subplot(gs2[1,:])
     # divider = make_axes_locatable(cbarax)
     # cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -668,35 +816,97 @@ def save_topinds(topinds, args, generation_cnt = 0):
     fig2.subplots_adjust(wspace=0.0, hspace = 0.05)
     fig2.savefig("%s/gen%04d_top%02d_geno__%s.%s" % (args.datadir, generation_cnt, len(topinds), args.expsig, args.snapshotfiletype), dpi = 300, bbox_inches="tight")
     pl.close(fig2)
+
+    fig3.subplots_adjust(wspace=0.0, hspace = 0.05)
+    fig3.savefig("%s/gen%04d_top%02d_pheno_ts_%s.%s" % (args.datadir, generation_cnt, len(topinds), args.expsig, args.snapshotfiletype), dpi = 300, bbox_inches="tight")
+    pl.close(fig3)
+    
     # pl.draw()
     # pl.pause(1e-4)
 
-def main_es_vanilla(args):
+def plot_fitness_stats(args, experiment, f3ax1):
+    avgf = []
+    stdf = []
+    maxf = []
+    minf = []
+    for gs in experiment["generations_stats"]:
+        avgf.append(gs["avg_fit"])
+        stdf.append(gs["std_fit"])
+        maxf.append(gs["max_fit"])
+        minf.append(gs["min_fit"])
+    avgf = np.array(avgf)
+    stdf = np.array(stdf)
+    maxf = np.array(maxf)
+    minf = np.array(minf)
+    f3ax1.clear()
+    f3ax1.plot(minf, "yo", alpha=0.5, label="min")
+    f3ax1.plot(maxf, "ko", alpha=0.5, label="max")
+    f3ax1.plot(avgf, "ro", alpha=0.5, label="avg")
+    f3ax1.plot(avgf + stdf, "go", alpha=0.5, label="+sigma")
+    f3ax1.plot(avgf - stdf, "go", alpha=0.5, label="-sigma")
+    f3ax1.legend()
+    pl.draw()
+    pl.pause(1e-3)
+
+def plot_fitness_selection_probs(args, f2ax1, fitprobs, fitprobs_rank):
+    f2ax1.clear()
+    f2ax1.plot(fitprobs, "k-o", alpha=0.2)
+    f2ax1.plot(fitprobs_rank, "r-o", alpha=0.2)
+    pl.draw()
+    pl.pause(1e-3)
+
+
+def plot_status(args, k, experiment, fig1, fig1axes, fig3):
+    # do some online plotting
+    if k % args.plotinterval == 0:
+        # print("generations", generations[-1])
+        # sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
+        sorted_x = sorted(experiment["generations"][-1].items(), key=lambda x: x[1]["loss"], reverse=True)
+        # for ind in generations[-1].values():
+        numsteps_ = getattr(args, "numsteps")
+        setattr(args, "numsteps", 1000)
+        topinds = []
+        for i,ind in enumerate(sorted_x):
+            if i >= (args.numpopulation - 5):
+                # test_ind(args = args, M = ind[1]["M"], fig = fig, axes = [ax1, ax2, ax3, ax4, ax4cb])
+                H2D, pi, ais = test_ind(args = args, M = ind[1]["M"], fig = fig1, axes = fig1axes[i - (args.numpopulation - args.numindplot)])
+                # save_ind(args, )
+                topinds.append({"M": ind[1]["M"], "H2D": H2D, "pi": pi, "ais": ais})
+            # print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
+        save_topinds(topinds, args, k)
+        setattr(args, "numsteps", numsteps_)
+        fig3.savefig("%s/ep3_mode%s_stats_%s.pdf" % (args.datadir, args.mode, args.expsig), dpi=300, bbox_inches="tight")
+
+def plot_cleanup(args, fig1, fig2, fig3):
+    print("Saving plots to %s" % args.datadir)
+    if args.plotsave:
+        fig1.savefig("%s/ep3_mode%s_top5_%s.pdf" % (args.datadir, args.mode, args.expsig), dpi=300, bbox_inches="tight")
+        fig2.savefig("%s/ep3_mode%s_prob_%s.pdf" % (args.datadir, args.mode, args.expsig), dpi=300, bbox_inches="tight")
+        fig3.savefig("%s/ep3_mode%s_stats_%s.pdf" % (args.datadir, args.mode, args.expsig), dpi=300, bbox_inches="tight")
+    print("Saving plots done")
+    # stay there
+    pl.ioff()
+    pl.show()
+    # pl.pause(100)
+                
+def main_es_vanilla(args, args_expr, args_plot):
+    """Vanilla Evolution strategies (ES)"""
     # evolution / opt params
-    numgenerations = args.numgenerations
-    numpopulation = args.numpopulation
-    numsteps = args.numsteps
-    numelite = args.numelite
 
-    setattr(args, "datadir", "ep3/ep3_es_vanilla_gen%s_meas%s_est%s_k%d_t%d_op_mut%s_%s" % (args.generator, args.measure, args.estimator, args.measure_k, args.measure_tau, args.op_mutation, args.expsig))
-    os.mkdir(args.datadir)
-    
-    # global logging structure: experiment configuration, generation data for all individuals and statistics
-    experiment = {
-        "conf": args,
-        "generations": [],
-        "generations_stats": [],
-    }
-    
-    # # generations array containing
-    # generations = []
+    # expand additional experiment configuration
+    experiment, hparams, cm = args_expr
 
-    # complexity measure
-    cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau, args.estimator)
-
+    # expand plotting arguments
+    fig1 = args_plot["fig1"]["fig"]
+    fig1axes = args_plot["fig1"]["axes"]
+    fig2  = args_plot["fig2"]["fig"]
+    f2ax1 = args_plot["fig2"]["axes"]
+    fig3  = args_plot["fig3"]["fig"]
+    f3ax1 = args_plot["fig3"]["axes"]
+            
     # array of parameter ndarray for the current generation
     newgen = []
-    for j in range(numpopulation):
+    for j in range(args.numpopulation):
         n, p, tau = get_generator_params(args)
         # print("p.shape", p.shape)
         # n = Genet(2, 2)
@@ -705,63 +915,14 @@ def main_es_vanilla(args):
         # newgen.append(n.networks["slow"]["M"])
         newgen.append(p)
 
-    numindplot = 5
-        
-    pl.ion()
-    fig = pl.figure(figsize = (20, 13))
-    fig.suptitle("%s top of generation x/y, params, timeseries" % (args.datadir))
-    
-    # gs = gridspec.GridSpec(4, 7 * numindplot)
-    # gs = gridspec.GridSpec(5, 6 * numindplot)
-    gs = gridspec.GridSpec(4, 4 * numindplot + 1)
-
-    allindaxes = []
-    for i in range(numindplot):
-        thisindaxes = []
-        # thisindaxes.append(fig.add_subplot(gs[0:2, (i*7)       : (i * 7 + 3)]))
-        # thisindaxes.append(fig.add_subplot(gs[0:2, (i * 7 + 3) : (i * 7 + 6)]))
-        # thisindaxes.append(fig.add_subplot(gs[0:2, (i*7 + 6)]))
-        # thisindaxes.append(fig.add_subplot(gs[2,   (i*7)       : ((i+1)*7)]))
-        # thisindaxes.append(fig.add_subplot(gs[3,   (i*7)       : ((i+1)*7)]))
-        
-        # thisindaxes.append(fig.add_subplot(gs[0:2, (i*6)       : (i * 6 + 3)]))
-        # thisindaxes.append(fig.add_subplot(gs[0:2, (i * 6 + 3) : (i * 6 + 6)]))
-        # thisindaxes.append(fig.add_subplot(gs[2,   (i * 6 + 3) : (i * 6 + 6)]))
-        # thisindaxes.append(fig.add_subplot(gs[3,   (i*6)       : ((i+1)*6)]))
-        # thisindaxes.append(fig.add_subplot(gs[4,   (i*6)       : ((i+1)*6)]))
-
-        thisindaxes.append(fig.add_subplot(gs[0:2, (i*4)       : (i * 4 + 2)]))
-        thisindaxes.append(fig.add_subplot(gs[0:2, (i * 4 + 2) : (i * 4 + 4)]))
-        thisindaxes.append(fig.add_subplot(gs[0:2, -1]))
-        thisindaxes.append(fig.add_subplot(gs[2,   (i*4)       : ((i+1)*4)]))
-        thisindaxes.append(fig.add_subplot(gs[3,   (i*4)       : ((i+1)*4)]))
-        allindaxes.append(thisindaxes)
-    
-    fig.show()
-    # pl.draw()
-
-    # selection probs
-    fig2 = pl.figure(figsize = (10, 6))
-    fig2.suptitle("%s selection probs" % (args.datadir))
-    f2ax1 = fig2.add_subplot(111)
-    fig2.show()
-
-    # fitness stats
-    fig3 = pl.figure(figsize = (10, 6))
-    fig3.suptitle("%s fitness stats" % (args.datadir))
-    f3ax1 = fig3.add_subplot(111)
-    fig3.show()
-        
+    # plotting
+    # ...
+                
     # loop over generations
-    for k in range(numgenerations + 1):
+    for k in range(args.numgenerations + 1):
         # arrays of individuals each element of which is
         population = dict()
 
-        hparams = {
-            "numsteps": numsteps,
-            "measure": cm,
-            "continuous": False,
-        }
         # pobjective = partial(objective, hparams=hparams)
         # pobjective = partial(objective_double, hparams=hparams)
         
@@ -769,7 +930,7 @@ def main_es_vanilla(args):
         pobjective = partial(obj, hparams=hparams)
         
         # loop over population
-        for j in range(numpopulation):
+        for j in range(args.numpopulation):
             # params = {
             #     "M": newgen[j],
             # }
@@ -814,28 +975,8 @@ def main_es_vanilla(args):
                                                                                generation_stats["std_fit"], generation_stats["min_fit"]))
         experiment["generations_stats"].append(generation_stats)
 
-        avgf = []
-        stdf = []
-        maxf = []
-        minf = []
-        for gs in experiment["generations_stats"]:
-            avgf.append(gs["avg_fit"])
-            stdf.append(gs["std_fit"])
-            maxf.append(gs["max_fit"])
-            minf.append(gs["min_fit"])
-        avgf = np.array(avgf)
-        stdf = np.array(stdf)
-        maxf = np.array(maxf)
-        minf = np.array(minf)
-        f3ax1.clear()
-        f3ax1.plot(minf, "yo", alpha=0.5, label="min")
-        f3ax1.plot(maxf, "ko", alpha=0.5, label="max")
-        f3ax1.plot(avgf, "ro", alpha=0.5, label="avg")
-        f3ax1.plot(avgf + stdf, "go", alpha=0.5, label="+sigma")
-        f3ax1.plot(avgf - stdf, "go", alpha=0.5, label="-sigma")
-        f3ax1.legend()
-        pl.draw()
-        pl.pause(1e-3)
+        # plot fitness stats for generation k
+        plot_fitness_stats(args, experiment, f3ax1)
 
         # generate new generation from loss sorted current generation
         # get best n individuals (FIXME: use a dataframe)
@@ -859,12 +1000,13 @@ def main_es_vanilla(args):
         if k % 10 == 0:
             pickle.dump(experiment, open("%s/ep3_experiment_%s.bin" % (args.datadir, args.expsig), "wb"))
 
+        # compute selection probabilities from individual's loss
         fitprobs      = []
         fitprobs_rank = []
         for i, (idx, ind) in enumerate(sorted_x):
             # print("i", i, "idx", idx) # , "ind", ind)
             fitprobs.append(ind["loss"])
-            fitprobs_rank.append((2 * numpopulation) - i)
+            fitprobs_rank.append((2 * args.numpopulation) - i)
         fitprobs = np.sqrt(np.abs(np.array(fitprobs)))
         fitprobs_rank = np.sqrt(np.array(fitprobs_rank, dtype=float))
         fitprobs /= np.sum(fitprobs)
@@ -872,30 +1014,26 @@ def main_es_vanilla(args):
         # print("fitprobs_rank", fitprobs_rank)
         # print("fitprobs", np.abs(fitprobs))
 
-        f2ax1.clear()
-        f2ax1.plot(fitprobs, "k-o", alpha=0.2)
-        f2ax1.plot(fitprobs_rank, "r-o", alpha=0.2)
-        pl.draw()
-        pl.pause(1e-3)
-
+        plot_fitness_selection_probs(args, f2ax1, fitprobs, fitprobs_rank)
+        
         # print("sample fitprobs", argsample(fitprobs))
                     
         # print("sorted_x", sorted_x[:]["loss"])
         # print(sorted_x[0][1])
         
         # do elite backup
-        for i in range(numelite):
+        for i in range(args.numelite):
             newgen[i] = sorted_x[i][1]["M"]
 
         # do non-elite new population
-        for i in range(numelite, numpopulation):
+        for i in range(args.numelite, args.numpopulation):
             # select
             # 1: sample weighted by fitness
             c = argsample(fitprobs)[0]
             # 2: sample weighted by fitness rank
             # 3: naive uniform sampling
             # 4: uniform from preselected percentage sampling
-            # c = np.random.choice(min(numpopulation, 15))# make tournament or something
+            # c = np.random.choice(min(args.numpopulation, 15))# make tournament or something
             newgen[i] = sorted_x[c][1]["M"]
 
             c1 = argsample(fitprobs)[0]
@@ -909,12 +1047,12 @@ def main_es_vanilla(args):
             newgen[i] = np.hstack((m1[:xover_at], m2[xover_at:])).reshape(sh_)
 
         # mutate all
-        for i in range(numelite, int(numpopulation * 1.2)): # mutate more
-            i = i % numpopulation
+        for i in range(args.numelite, int(args.numpopulation * 1.2)): # mutate more
+            i = i % args.numpopulation
             # mutate
             if np.random.uniform() < 0.25: # 05:
                 mut_idx = np.random.choice(np.prod(newgen[i].shape))
-                ind_idx = np.random.choice(numpopulation)
+                ind_idx = np.random.choice(args.numpopulation)
                 # print("mut_idx", mut_idx)
                 tmp_s = newgen[ind_idx].shape
                 tmp = newgen[ind_idx].flatten()
@@ -926,33 +1064,10 @@ def main_es_vanilla(args):
                 # print("n", n, tmp[mut_idx])
                 newgen[ind_idx] = tmp.copy().reshape(tmp_s)
 
-        # do some online plotting
-        if k % args.plotinterval == 0:
-            # print("generations", generations[-1])
-            # sorted_x = sorted(generations[-1].items(), key=lambda x: x[1]["loss"], reverse=True)
-            sorted_x = sorted(experiment["generations"][-1].items(), key=lambda x: x[1]["loss"], reverse=True)
-            # for ind in generations[-1].values():
-            numsteps_ = getattr(args, "numsteps")
-            setattr(args, "numsteps", 1000)
-            topinds = []
-            for i,ind in enumerate(sorted_x):
-                if i >= (numpopulation - 5):
-                    # test_ind(args = args, M = ind[1]["M"], fig = fig, axes = [ax1, ax2, ax3, ax4, ax4cb])
-                    H2D, pi, ais = test_ind(args = args, M = ind[1]["M"], fig = fig, axes = allindaxes[i - (numpopulation - numindplot)])
-                    # save_ind(args, )
-                    topinds.append({"M": ind[1]["M"], "H2D": H2D, "pi": pi, "ais": ais})
-                # print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
-            save_topinds(topinds, args, k)
-            setattr(args, "numsteps", numsteps_)
-            fig3.savefig("%s/ep3_es_vanilla_stats_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
-            
-    pl.ioff()
-    pl.show()
-    if args.plotsave:
-        fig.savefig("%s/ep3_es_vanilla_top5_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
-        fig2.savefig("%s/ep3_es_vanilla_prob_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
-        fig3.savefig("%s/ep3_es_vanilla_stats_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
-    # pl.pause(100)
+        # plot status
+        plot_status(args, k, experiment, fig1, fig1axes, fig3)
+
+    plot_cleanup(args, fig1, fig2, fig3)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -976,8 +1091,10 @@ if __name__ == "__main__":
                         help="number of timesteps for individual evaluation [1000]")
     parser.add_argument("-ne", "--numelite", type=int, default=1,
                         help="Extent of elitism, how many best individuals to transfer unmodified [1]")
-    parser.add_argument("-nei", "--numevalind", type=int, default=1,
+    parser.add_argument("-nie", "--numindeval", type=int, default=1,
                         help="How often to eval an individual for statistics [1]")
+    parser.add_argument("-nip", "--numindplot", type=int, default=5,
+                        help="How many individuals to plot [5]")
     parser.add_argument("-ng", "--numgenerations", type=int, default=100,
                         help="number of generations to evolve for [100]")
     parser.add_argument("-np", "--numpopulation", type=int, default=20,
