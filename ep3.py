@@ -377,7 +377,7 @@ def objective(params, hparams):
     }
         
     pi = 0
-    for i in range(5):
+    for i in range(args.numevalind):
         Xs = evaluate_individual(conf)
         
         Xs_meas = Xs[:,[1,2]]
@@ -386,7 +386,7 @@ def objective(params, hparams):
         # pi = cm.compute_ais(Xs)
         # pi = cm.compute_pi_local(Xs)
         pi += cm.compute(Xs_meas)
-    pi /= 5.0
+    pi /= float(args.numevalind)
     pi = max(0, pi) + 1e-9
     # print("pi = %f nats" % pi)
     # loss = -np.log(pi)
@@ -540,32 +540,35 @@ def main_hp(args):
         "measure": ComplexityMeasure(),
         "continuous": False,
     }
-    pobjective = partial(objective, hparams=hparams)
+    obj = get_obj(args)
+    pobjective = partial(obj, hparams=hparams)
+    # pobjective = partial(objective, hparams=hparams)
 
-    print(pobjective(params = np.random.uniform(-1.0, 1.0, (2,2))))
+    n, p, tau = get_generator_params(args)
+    # print("size(p)", p.size)
+    # print("pobjective", pobjective(params = np.random.uniform(-1.0, 1.0, p.shape)))
     
     def objective_hp(params):
         # print("params", params)
-        targ = np.array(params) # .astype(np.float32)
-        # print(targ.dtype)
+        targ = np.array(params).reshape(p.shape) # .astype(np.float32)
+        # print("targ", targ)
         now = time.time()
         func = pobjective # args["func"]
         ret = func(targ) # cma.fcts.griewank(targ)
         took = time.time() - now
-        print("feval took %f s with ret = %s" % (took, ret["loss"]))
+        print("feval took %f s with ret = %f" % (took, ret["loss"]))
         return ret
 
-    space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(4)]
+    space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(p.size)]
 
     trials = Trials()
-    suggest = tpe.suggest # something
+    suggest = args.suggest # tpe.suggest # something
     bests = []
     initevals = 0
-    maxevals = 500
+    maxevals = args.numgenerations # 500
     lrstate = np.random.RandomState(123)
     
     for i in range(initevals, maxevals):
-        print("fmin iter %d" % i,)
         bests.append(fmin(objective_hp,
                     space,
                     algo=suggest,
@@ -574,6 +577,7 @@ def main_hp(args):
                     trials=trials,
                     verbose=1))
         lrstate = np.random.RandomState()
+        print("fmin iter %d with loss %s" % (i, bests[-1]))
 
     best = bests[-1]
     for i in range(5):
@@ -656,11 +660,11 @@ def save_topinds(topinds, args, generation_cnt = 0):
     cbar = fig2.colorbar(mappable = mappable, cax = cbarax, orientation = "horizontal") # , fraction = 0.1)
 
     fig1.subplots_adjust(wspace=0.0, hspace = 0.0)
-    fig1.savefig("%s/gen%04d_top%02d_pheno_%s.jpg" % (args.datadir, generation_cnt, len(topinds), args.expsig), dpi = 300, bbox_inches="tight")
+    fig1.savefig("%s/gen%04d_top%02d_pheno_%s.%s" % (args.datadir, generation_cnt, len(topinds), args.expsig, args.snapshotfiletype), dpi = 300, bbox_inches="tight")
     pl.close(fig1)
     
     fig2.subplots_adjust(wspace=0.0, hspace = 0.05)
-    fig2.savefig("%s/gen%04d_top%02d_geno__%s.jpg" % (args.datadir, generation_cnt, len(topinds), args.expsig), dpi = 300, bbox_inches="tight")
+    fig2.savefig("%s/gen%04d_top%02d_geno__%s.%s" % (args.datadir, generation_cnt, len(topinds), args.expsig, args.snapshotfiletype), dpi = 300, bbox_inches="tight")
     pl.close(fig2)
     # pl.draw()
     # pl.pause(1e-4)
@@ -672,7 +676,7 @@ def main_es_vanilla(args):
     numsteps = args.numsteps
     numelite = args.numelite
 
-    setattr(args, "datadir", "ep3/ep3_es_vanilla_gen%s_meas%s_est%s_k%d_t%d_%s" % (args.generator, args.measure, args.estimator, args.measure_k, args.measure_tau, args.expsig))
+    setattr(args, "datadir", "ep3/ep3_es_vanilla_gen%s_meas%s_est%s_k%d_t%d_op_mut%s_%s" % (args.generator, args.measure, args.estimator, args.measure_k, args.measure_tau, args.op_mutation, args.expsig))
     os.mkdir(args.datadir)
     
     # global logging structure: experiment configuration, generation data for all individuals and statistics
@@ -733,10 +737,12 @@ def main_es_vanilla(args):
     fig.show()
     # pl.draw()
 
+    # selection probs
     fig2 = pl.figure(figsize = (10, 6))
     f2ax1 = fig2.add_subplot(111)
     fig2.show()
 
+    # fitness stats
     fig3 = pl.figure(figsize = (10, 6))
     f3ax1 = fig3.add_subplot(111)
     fig3.show()
@@ -932,6 +938,7 @@ def main_es_vanilla(args):
                 # print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
             save_topinds(topinds, args, k)
             setattr(args, "numsteps", numsteps_)
+            fig2.savefig("ep3_es_vanilla_stats_%s.pdf" % args.expsig, dpi=300, bbox_inches="tight")
             
     pl.ioff()
     pl.show()
@@ -963,11 +970,15 @@ if __name__ == "__main__":
                         help="number of timesteps for individual evaluation [1000]")
     parser.add_argument("-ne", "--numelite", type=int, default=1,
                         help="Extent of elitism, how many best individuals to transfer unmodified [1]")
+    parser.add_argument("-nei", "--numevalind", type=int, default=1,
+                        help="How often to eval an individual for statistics [1]")
     parser.add_argument("-ng", "--numgenerations", type=int, default=100,
                         help="number of generations to evolve for [100]")
     parser.add_argument("-np", "--numpopulation", type=int, default=20,
                         help="number of individuals in population [20]")
     parser.add_argument('-ps', "--plotsave", action='store_true', help='Save plot to pdf?')
     parser.add_argument('-pi', "--plotinterval", type=int, default=10, help='Interval for intermediate plotting [10], in number of generations')
+    parser.add_argument("-sf", "--snapshotfiletype", type=str, default="jpg",
+                        help="Filetype for snapshots saved to datadir [jpg]")
     args = parser.parse_args()
     main(args)
