@@ -629,9 +629,9 @@ def save_topinds(topinds, args, generation_cnt = 0):
         Mmin = min(Mmin, np.min(topind["M"]))
         
     fig1 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
-    fig1.suptitle("%s @generation[%d] x/y" % (args.datadir, generation_cnt))
+    # fig1.suptitle("%s @generation[%d] x/y" % (args.datadir, generation_cnt))
     fig2 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
-    fig2.suptitle("%s @generation[%d] params" % (args.datadir, generation_cnt))
+    # fig2.suptitle("%s @generation[%d] params" % (args.datadir, generation_cnt))
     # fig.show()
     gs1 = gridspec.GridSpec(1, len(topinds) * 1)
     gs2 = gridspec.GridSpec(2, len(topinds) * 1, height_ratios = [0.95, 0.05]) # + 1, width_ratios = [1] * len(topinds) + [0.1])
@@ -894,6 +894,7 @@ def main_es_vanilla(args):
             c = argsample(fitprobs)[0]
             # 2: sample weighted by fitness rank
             # 3: naive uniform sampling
+            # 4: uniform from preselected percentage sampling
             # c = np.random.choice(min(numpopulation, 15))# make tournament or something
             newgen[i] = sorted_x[c][1]["M"]
 
@@ -943,14 +944,14 @@ def main_es_vanilla(args):
                 # print("last generation fit/M", ind[1]["loss"], ind[1]["M"])
             save_topinds(topinds, args, k)
             setattr(args, "numsteps", numsteps_)
-            fig2.savefig("%s/ep3_es_vanilla_stats_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
+            fig3.savefig("%s/ep3_es_vanilla_stats_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
             
     pl.ioff()
     pl.show()
     if args.plotsave:
         fig.savefig("%s/ep3_es_vanilla_top5_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
-        fig2.savefig("%s/ep3_es_vanilla_stats_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
-        fig3.savefig("%s/ep3_es_vanilla_prob_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
+        fig2.savefig("%s/ep3_es_vanilla_prob_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
+        fig3.savefig("%s/ep3_es_vanilla_stats_%s.pdf" % (args.datadir, args.expsig), dpi=300, bbox_inches="tight")
     # pl.pause(100)
 
 if __name__ == "__main__":
