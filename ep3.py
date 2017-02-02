@@ -629,7 +629,9 @@ def save_topinds(topinds, args, generation_cnt = 0):
         Mmin = min(Mmin, np.min(topind["M"]))
         
     fig1 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
+    fig1.suptitle("%s @generation[%d] x/y" % (args.datadir, generation_cnt))
     fig2 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
+    fig2.suptitle("%s @generation[%d] params" % (args.datadir, generation_cnt))
     # fig.show()
     gs1 = gridspec.GridSpec(1, len(topinds) * 1)
     gs2 = gridspec.GridSpec(2, len(topinds) * 1, height_ratios = [0.95, 0.05]) # + 1, width_ratios = [1] * len(topinds) + [0.1])
@@ -707,6 +709,7 @@ def main_es_vanilla(args):
         
     pl.ion()
     fig = pl.figure(figsize = (20, 13))
+    fig.suptitle("%s top of generation x/y, params, timeseries" % (args.datadir))
     
     # gs = gridspec.GridSpec(4, 7 * numindplot)
     # gs = gridspec.GridSpec(5, 6 * numindplot)
@@ -739,16 +742,18 @@ def main_es_vanilla(args):
 
     # selection probs
     fig2 = pl.figure(figsize = (10, 6))
+    fig2.suptitle("%s selection probs" % (args.datadir))
     f2ax1 = fig2.add_subplot(111)
     fig2.show()
 
     # fitness stats
     fig3 = pl.figure(figsize = (10, 6))
+    fig3.suptitle("%s fitness stats" % (args.datadir))
     f3ax1 = fig3.add_subplot(111)
     fig3.show()
         
     # loop over generations
-    for k in range(numgenerations):
+    for k in range(numgenerations + 1):
         # arrays of individuals each element of which is
         population = dict()
 
