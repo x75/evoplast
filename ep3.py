@@ -540,32 +540,35 @@ def main_hp(args):
         "measure": ComplexityMeasure(),
         "continuous": False,
     }
-    pobjective = partial(objective, hparams=hparams)
+    obj = get_obj(args)
+    pobjective = partial(obj, hparams=hparams)
+    # pobjective = partial(objective, hparams=hparams)
 
-    print(pobjective(params = np.random.uniform(-1.0, 1.0, (2,2))))
+    n, p, tau = get_generator_params(args)
+    # print("size(p)", p.size)
+    # print("pobjective", pobjective(params = np.random.uniform(-1.0, 1.0, p.shape)))
     
     def objective_hp(params):
         # print("params", params)
-        targ = np.array(params) # .astype(np.float32)
-        # print(targ.dtype)
+        targ = np.array(params).reshape(p.shape) # .astype(np.float32)
+        # print("targ", targ)
         now = time.time()
         func = pobjective # args["func"]
         ret = func(targ) # cma.fcts.griewank(targ)
         took = time.time() - now
-        print("feval took %f s with ret = %s" % (took, ret["loss"]))
+        print("feval took %f s with ret = %f" % (took, ret["loss"]))
         return ret
 
-    space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(4)]
+    space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(p.size)]
 
     trials = Trials()
-    suggest = tpe.suggest # something
+    suggest = args.suggest # tpe.suggest # something
     bests = []
     initevals = 0
-    maxevals = 500
+    maxevals = args.numgenerations # 500
     lrstate = np.random.RandomState(123)
     
     for i in range(initevals, maxevals):
-        print("fmin iter %d" % i,)
         bests.append(fmin(objective_hp,
                     space,
                     algo=suggest,
@@ -574,6 +577,7 @@ def main_hp(args):
                     trials=trials,
                     verbose=1))
         lrstate = np.random.RandomState()
+        print("fmin iter %d with loss %s" % (i, bests[-1]))
 
     best = bests[-1]
     for i in range(5):
