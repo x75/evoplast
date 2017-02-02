@@ -897,7 +897,7 @@ def main_es_vanilla(args):
             newgen[i] = np.hstack((m1[:xover_at], m2[xover_at:])).reshape(sh_)
 
         # mutate all
-        for i in range(numpopulation * 2): # mutate more
+        for i in range(int(numpopulation * 1.2)): # mutate more
             i = i % numpopulation
             # mutate
             if np.random.uniform() < 0.25: # 05:
@@ -907,7 +907,7 @@ def main_es_vanilla(args):
                 tmp_s = newgen[ind_idx].shape
                 tmp = newgen[ind_idx].flatten()
                 if args.op_mutation == "normal":
-                    n = np.random.normal(0, 1.0)
+                    n = np.random.normal(0, 0.5)
                 elif args.op_mutation == "pareto":
                     n = ((np.random.binomial(1, 0.5) - 0.5) * 2) * np.random.pareto(1.5) * 0.5
                 tmp[mut_idx] += n
