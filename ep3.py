@@ -661,7 +661,8 @@ def main_hp(args, args_expr, args_plot):
 
     
     # space = [hp.loguniform("m%d" % i, -5, 2.0) for i in range(p.size)]
-    space = [hp.uniform("m%d" % i, -10.0, 10.0) for i in range(p.size)]
+    # space = [hp.uniform("m%d" % i, -10.0, 10.0) for i in range(p.size)]
+    space = [hp.uniform("m%d" % i, -1.0, 1.0) for i in range(p.size)]
 
     trials = Trials()
     suggest = args.suggest # tpe.suggest # something
