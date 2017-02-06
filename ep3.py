@@ -1021,7 +1021,6 @@ def test_ind(args, M = None, fig = None, axes = None):
           5.01350521e-03,   8.27008951e-03,  -5.22554447e-03,
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   4.55191598e-03]])
-    
         
     M = np.array(M)
 
@@ -1356,8 +1355,9 @@ def main(args):
     setattr(args, "expsig", time.strftime("%Y%m%d-%H%M%S"))
 
     # data directory for this run
-    setattr(args, "datadir", "ep3/ep3_mode%s_gen%s_meas%s_est%s_k%d_t%d_op_mut%s_%s" % (args.mode, args.generator,
-        args.measure, args.estimator, args.measure_k, args.measure_tau, args.op_mutation, args.expsig))
+    setattr(args, "datadir", "ep3/ep3_mode%s_gen%s_meas%s_est%s_k%d_t%d_op_mut%s_ns%d_ng%d_np%d_%s" % (args.mode, args.generator,
+        args.measure, args.estimator, args.measure_k, args.measure_tau, args.op_mutation, args.numsteps, args.numgenerations,
+        args.numpopulation, args.expsig))
     try:
         print("Creating directory %s" % (args.datadir))
         os.mkdir(args.datadir)
