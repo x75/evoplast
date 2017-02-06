@@ -1284,7 +1284,7 @@ def create_args_expr(args):
             setattr(experiment["conf"], "numgenerations", numgenerations_)
             print("Loaded existing experiment with length %d = startgen %d from %s" % (len(experiment["generations"]), args.startgeneration, args.experimentfile))
         except IOError:
-            print("error opening file %s" % args.experimentfile)
+            print("create_args_expr: error opening file %s" % args.experimentfile)
             sys.exit(1)
     else:
         experiment = {
@@ -1417,6 +1417,11 @@ def main(args):
         np.save("Xs-%s.npy" % args.expsig, Xs)
     elif args.mode == "plot_fitness_stats_experiment":
         plot_fitness_stats_experiment(args)
+    elif args.mode == "plot_fitness_stats_experiments":
+        plot_fitness_stats_experiments(args)
+    else:
+        print("Unknown mode %s" % args.mode)
+        sys.exit(1)
 
 def plot_fitness_stats_experiment(args):
     experiment = pickle.load(open(args.experimentfile, "rb"))
@@ -1435,6 +1440,63 @@ def plot_fitness_stats_experiment(args):
     fig3.show()
 
     plot_fitness_stats(args, experiment, f3ax1)
+    # plot_cl
+
+    args = oldargs
+    fig3.savefig("%s/ep3_mode%s_stats_%s.pdf" % (args.datadir, args.mode, args.expsig), dpi=300, bbox_inches="tight")
+    pl.show()
+    
+def plot_fitness_stats_experiments(args):
+    experiments = []
+    for expr_file in args.experimentfiles[0]:
+        print("expr_file", expr_file)
+        experiments.append(pickle.load(open(expr_file, "rb")))
+    numexperiments = len(experiments)
+    
+    # gs = experiment["generations_stats"]
+
+    # m = np.array([d["avg_fit"] for d in gsdict])
+
+    oldargs = args
+    args = experiments[0]["conf"]
+        
+    # fitness stats
+    fig3 = pl.figure(figsize = (10, 4))
+    fig3.suptitle("%s fitness stats averaged over %d runs" % (args.datadir, len(experiments)))
+    f3ax1 = fig3.add_subplot(111)
+    fig3.show()
+
+    
+    # m = np.array([d["avg_fit"] for d in gsdict])
+    # m = np.zeros(())
+    maxgen = 0
+    for i,expr in enumerate(epxeriments):
+        maxgen = max(0, len(experiments["generations"]))
+
+    avgf = np.zeros((maxgen, ))
+    stdf = np.zeros((maxgen, ))
+    maxf = np.zeros((maxgen, ))
+    minf = np.zeros((maxgen, ))
+    for i,expr in enumerate(epxeriments):
+        for j,gs in enumerate(experiments["generations_stats"]):
+            avgf[j] += gs["avg_fit"]
+            stdf[j] += gs["std_fit"]
+            maxf[j] += gs["max_fit"]
+            minf[j] += gs["min_fit"]
+
+    print("stats", avgf, stdf, maxf, minf)
+
+    f3ax1.clear()
+    f3ax1.plot(minf, "yo", alpha=0.5, label="min")
+    f3ax1.plot(maxf, "ko", alpha=0.5, label="max")
+    f3ax1.plot(avgf, "ro", alpha=0.5, label="avg")
+    f3ax1.plot(avgf + stdf, "go", alpha=0.5, label="+sigma")
+    f3ax1.plot(avgf - stdf, "go", alpha=0.5, label="-sigma")
+    f3ax1.legend()
+    pl.draw()
+    pl.pause(1e-3)
+
+    # plot_fitness_stats(args, experiment, f3ax1)
     # plot_cl
 
     args = oldargs
@@ -1923,7 +1985,10 @@ if __name__ == "__main__":
                         help="Mutation operator noise type [pareto]")
     parser.add_argument("-e", "--estimator", type=str, default="kraskov1",
                         help="Type of estimator to use with JIDT [kraskov1].")
-    parser.add_argument("-ef", "--experimentfile", type=str, default="epxeriment.bin",
+    parser.add_argument('-efs', "--experimentfiles", action='append', dest='experimentfiles',
+                        default=[], nargs = "+",
+                        help='Add several experimentfiles',)
+    parser.add_argument("-ef", "--experimentfile", type=str, default=None,
                         help="If mode is plot_fitness_stats_experiment, which datafile to load [experiment.bin].")
     parser.add_argument("-g", "--generator", type=str, default="basic",
                         help="Type of generator [basic]. This is the structure whose parameters we want to evolve.")
