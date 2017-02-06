@@ -1270,11 +1270,28 @@ def objective_double(params, hparams):
 
 def create_args_expr(args):
     # global logging structure: experiment configuration, generation data for all individuals and statistics
-    experiment = {
-        "conf": args,
-        "generations": [],
-        "generations_stats": [],
-    }
+
+    if args.experimentfile is not None:
+        try:
+            experiment = pickle.load(open(args.experimentfile, "rb"))
+            experimentfile_ = args.experimentfile
+            numgenerations_ = args.numgenerations
+            args = experiment["conf"]
+            # set a start generation
+            setattr(experiment["conf"], "startgeneration", len(experiment["generations"]))
+            # transfer the .bin file over to old config
+            setattr(experiment["conf"], "experimentfile", experimentfile_)
+            setattr(experiment["conf"], "numgenerations", numgenerations_)
+            print("Loaded existing experiment with length %d = startgen %d from %s" % (len(experiment["generations"]), args.startgeneration, args.experimentfile))
+        except IOError:
+            print("error opening file %s" % args.experimentfile)
+            sys.exit(1)
+    else:
+        experiment = {
+            "conf": args,
+            "generations": [],
+            "generations_stats": [],
+        }
 
     # complexity measure
     cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau, args.estimator)
@@ -1367,10 +1384,14 @@ def main(args):
 
     # get additional experiment configuration
     args_expr = create_args_expr(args)
-
+    # args.startgeneration = args_expr[0]["conf"].startgeneration
+    # HACK
+    if args.mode == "es_vanilla" and len(args_expr[0]["generations"]) > 0:
+        args = args_expr[0]["conf"]
+    
     # get plotting configuration
     args_plot = create_args_plot(args)
-    
+        
     # mode dispatch
     if args.mode == "es_vanilla":
         main_es_vanilla(args, args_expr, args_plot)
@@ -1727,20 +1748,26 @@ def main_es_vanilla(args, args_expr, args_plot):
             
     # array of parameter ndarray for the current generation
     newgen = []
-    for j in range(args.numpopulation):
-        n, p, tau = get_generator_params(args)
-        # print("p.shape", p.shape)
-        # n = Genet(2, 2)
-        # newgen.append(n.M)
-        # n = GenetPlast(2, 2)
-        # newgen.append(n.networks["slow"]["M"])
-        newgen.append(p)
+    if len(experiment["generations"]) > 0:
+        for k,v in experiment["generations"][-1].items():
+            newgen.append(v["M"])
+
+    else:
+        for j in range(args.numpopulation):
+            n, p, tau = get_generator_params(args)
+            # print("p.shape", p.shape)
+            # n = Genet(2, 2)
+            # newgen.append(n.M)
+            # n = GenetPlast(2, 2)
+            # newgen.append(n.networks["slow"]["M"])
+            newgen.append(p)
 
     # plotting
     # ...
                 
     # loop over generations
-    for k in range(args.numgenerations + 1):
+    for k in range(args.startgeneration, args.numgenerations + 1):
+        print("gen %d, start at %d, go to %d" % (k, args.startgeneration, args.numgenerations))
         # arrays of individuals each element of which is
         population = dict()
 
@@ -1920,6 +1947,8 @@ if __name__ == "__main__":
                         help="How many individuals to plot [5]")
     parser.add_argument("-ng", "--numgenerations", type=int, default=100,
                         help="number of generations to evolve for [100]")
+    parser.add_argument("-sg", "--startgeneration", type=int, default=0,
+                        help="Init evolution at generation #, to resume interrupted runs or extend the experiment [0]")
     parser.add_argument("-np", "--numpopulation", type=int, default=20,
                         help="number of individuals in population [20]")
     parser.add_argument('-ps', "--plotsave", action='store_true', help='Save plot to pdf?')
