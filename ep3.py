@@ -1447,6 +1447,7 @@ def plot_fitness_stats_experiment(args):
     pl.show()
     
 def plot_fitness_stats_experiments(args):
+    """load several logfiles, average the fitness statistics and plot them as a single statistic"""
     experiments = []
     for expr_file in args.experimentfiles[0]:
         print("expr_file", expr_file)
@@ -1460,18 +1461,16 @@ def plot_fitness_stats_experiments(args):
     oldargs = args
     args = experiments[0]["conf"]
         
-    # fitness stats
-    fig3 = pl.figure(figsize = (10, 4))
-    fig3.suptitle("%s fitness stats averaged over %d runs" % (args.datadir, len(experiments)))
-    f3ax1 = fig3.add_subplot(111)
-    fig3.show()
-
-    
-    # m = np.array([d["avg_fit"] for d in gsdict])
-    # m = np.zeros(())
     maxgen = 0
     for i,expr in enumerate(experiments):
         maxgen = max(0, len(expr["generations"]))
+
+    # fitness stats
+    fig3 = pl.figure(figsize = (10, 4))
+    # fig3.suptitle("%s fitness stats averaged over %d runs" % (args.datadir, len(experiments), maxgen))
+    fig3.suptitle("Fitness moments averaged over %d runs for %d generations" % (args.datadir, len(experiments)), fontsize=10)
+    f3ax1 = fig3.add_subplot(111)
+    fig3.show()
 
     avgf = np.zeros((maxgen, ))
     stdf = np.zeros((maxgen, ))
