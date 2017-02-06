@@ -72,7 +72,7 @@ class GenetPlast(Genet):
         self.networks["slow"]["i_dim"] = self.networks["slow"]["s_dim"] + self.state_dim
         # slow network transition matrix
         if M is None:
-            self.networks["slow"]["M"] = np.random.uniform(-1, 1, (self.networks["slow"]["s_dim"], self.networks["slow"]["i_dim"])) * 1.0
+            self.networks["slow"]["M"] = np.random.uniform(-1, 1, (self.networks["slow"]["s_dim"], self.networks["slow"]["i_dim"])) * 0.005 # 1.0
         else:
             self.networks["slow"]["M"] = M
             
