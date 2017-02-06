@@ -48,6 +48,7 @@ except ImportError:
 from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
 
 from smp.infth import init_jpype # , ComplexityMeas
+from smp.smp_plot import put_legend_out_right, put_legend_out_top
 
 from ep4 import Genet, GenetPlast
 
@@ -1468,7 +1469,7 @@ def plot_fitness_stats_experiments(args):
     # fitness stats
     fig3 = pl.figure(figsize = (10, 4))
     # fig3.suptitle("%s fitness stats averaged over %d runs" % (args.datadir, len(experiments), maxgen))
-    fig3.suptitle("Fitness moments averaged over %d runs for %d generations" % (args.datadir, len(experiments), maxgen), fontsize=10)
+    fig3.suptitle("Fitness moments averaged over %d runs for %d generations" % (len(experiments), maxgen), fontsize=10)
     f3ax1 = fig3.add_subplot(111)
     fig3.show()
 
@@ -1496,7 +1497,10 @@ def plot_fitness_stats_experiments(args):
     f3ax1.plot(avgf, "ro", alpha=0.5, label="avg")
     f3ax1.plot(avgf + stdf, "go", alpha=0.5, label="+sigma")
     f3ax1.plot(avgf - stdf, "go", alpha=0.5, label="-sigma")
-    f3ax1.legend()
+    # f3ax1.legend()
+    put_legend_out_top(labels = ["min", "max", "avg", "+sigma", "-sigma"], resize_by = 0.8, ax = f3ax1)
+    f3ax1.set_xlabel("Generation [k]")
+    f3ax1.set_ylabel("Empirical pred. inf. [nats]")
     pl.draw()
     pl.pause(1e-3)
 
