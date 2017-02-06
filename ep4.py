@@ -62,7 +62,7 @@ class GenetPlast(Genet):
         # fast network state
         self.networks["fast"]["x"] = np.random.uniform(-1e-0, 1e-0, (self.state_dim, 1)) * 1.0
         # fast network transition matrix
-        self.networks["fast"]["M"] = np.random.uniform(-1e-0, 1e-0, (self.state_dim, self.state_dim)) * 1.0
+        self.networks["fast"]["M"] = np.random.uniform(-1e-0, 1e-0, (self.state_dim, self.state_dim)) * 1.0 # 0.01
 
         # fast network timescale
         self.networks["slow"]["tau"] = 0.8 # 0.99 # 0.8 # 0.96
@@ -72,7 +72,7 @@ class GenetPlast(Genet):
         self.networks["slow"]["i_dim"] = self.networks["slow"]["s_dim"] + self.state_dim
         # slow network transition matrix
         if M is None:
-            self.networks["slow"]["M"] = np.random.uniform(-1, 1, (self.networks["slow"]["s_dim"], self.networks["slow"]["i_dim"])) * 1.0
+            self.networks["slow"]["M"] = np.random.uniform(-1, 1, (self.networks["slow"]["s_dim"], self.networks["slow"]["i_dim"])) * 0.01 # 
         else:
             self.networks["slow"]["M"] = M
             

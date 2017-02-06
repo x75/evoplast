@@ -212,7 +212,7 @@ def test_ind(args, M = None, fig = None, axes = None):
         # M = [[M_["m0"], M_["m1"]], [M_["m2"], M_["m3"]]]
 
         # cma_es 20170131 slow M
- #        M = [-0.7514154 , -2.7365132 ,  2.61213931 ,-1.84910997 ,-0.66426485 , 2.08347174 -1.09825155 , 0.93310625 ,-1.65316607 , 1.16035822 , 0.24026319 , 0.59995612 
+        # M = [-0.7514154 , -2.7365132 ,  2.61213931 ,-1.84910997 ,-0.66426485 , 2.08347174 -1.09825155 , 0.93310625 ,-1.65316607 , 1.16035822 , 0.24026319 , 0.59995612 
  # -0.41730344 , 7.79230665 ,-1.49233779 ,-1.58248257 , 3.6782291 , -2.89003224
  #  4.328539 ,   2.43253161 , 0.4810217 , -4.14685984 ,-4.90913503 , 0.93255625
  # -1.30142747 , 0.55256147 ,-0.55657707 , 0.57766382 , 1.81523245 , 6.89785479
@@ -270,7 +270,7 @@ def test_ind(args, M = None, fig = None, axes = None):
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   4.55191598e-03]])
 
-    M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
+        M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
           9.18686839e-03,   8.64899165e-03,  -3.58777243e-04,
          -7.34734323e-03,   6.97727050e-03,   6.09601684e-03,
           4.64475945e-03,   3.67067992e-03,   4.17803956e-03],
@@ -307,7 +307,7 @@ def test_ind(args, M = None, fig = None, axes = None):
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   4.55191598e-03]])
 
-    M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
+        M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
           9.18686839e-03,  -2.26458692e-03,  -1.40680326e-03,
           9.38356454e-04,   8.74187719e-03,   6.09601684e-03,
           4.64475945e-03,   3.67067992e-03,   4.17803956e-03],
@@ -344,7 +344,7 @@ def test_ind(args, M = None, fig = None, axes = None):
           4.06199334e-03,   2.20667585e-03,  -3.93073023e-04,
          -6.54898366e-03,   9.23640066e-03,   2.29411501e-03]])
 
-    M = np.array([[ -4.41394589e-03,   2.84829159e-03,   5.86625602e-03,
+        M = np.array([[ -4.41394589e-03,   2.84829159e-03,   5.86625602e-03,
          -5.17653243e-03,   5.45606876e-04,   7.54417550e-03,
           4.82357605e-03,  -3.57799932e-03,   5.41876366e-03,
          -8.09133005e-03,  -6.51702876e-03,  -4.93728578e-03],
@@ -381,7 +381,7 @@ def test_ind(args, M = None, fig = None, axes = None):
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   1.91033627e-03]])
 
-    M = np.array([[ -4.41394589e-03,   2.84829159e-03,   5.86625602e-03,
+        M = np.array([[ -4.41394589e-03,   2.84829159e-03,   5.86625602e-03,
          -5.17653243e-03,   5.45606876e-04,   7.54417550e-03,
           4.82357605e-03,  -3.57799932e-03,   5.41876366e-03,
          -8.09133005e-03,  -6.51702876e-03,  -4.93728578e-03],
@@ -418,7 +418,7 @@ def test_ind(args, M = None, fig = None, axes = None):
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   1.91033627e-03]])
 
-    M = np.array([[ -9.34913387e-03,  -6.43812543e-04,  -2.02307346e-03,
+        M = np.array([[ -9.34913387e-03,  -6.43812543e-04,  -2.02307346e-03,
          -3.29209451e-03,  -2.26458692e-03,  -1.40680326e-03,
           9.38356454e-04,   8.74187719e-03,   9.65564865e-03,
           4.52953837e-03,   7.02029383e-03,   5.35614425e-03],
@@ -455,7 +455,7 @@ def test_ind(args, M = None, fig = None, axes = None):
          -7.91358133e-03,   8.42187747e-04,   7.28503291e-03,
           9.18224900e-03,   4.25884031e-03,   9.96466699e-03]])
 
-    M = np.array([[ -3.09146038e-03,  -3.99760382e-03,  -6.84405476e-03,
+        M = np.array([[ -3.09146038e-03,  -3.99760382e-03,  -6.84405476e-03,
           7.23321848e-03,  -9.44037829e-03,  -4.52958830e-03,
           2.44820259e-03,   4.64789294e-03,   9.37455909e-03,
          -7.34570136e-03,  -3.19360457e-03,  -6.20762822e-03],
@@ -492,7 +492,7 @@ def test_ind(args, M = None, fig = None, axes = None):
          -7.91358133e-03,   8.42187747e-04,   7.28503291e-03,
           9.18224900e-03,   4.25884031e-03,   9.96466699e-03]])
 
-    M = np.array([[ -4.41394589e-03,   2.84829159e-03,   5.86625602e-03,
+        M = np.array([[ -4.41394589e-03,   2.84829159e-03,   5.86625602e-03,
          -5.17653243e-03,   5.45606876e-04,   7.54417550e-03,
           4.82357605e-03,  -3.57799932e-03,   5.41876366e-03,
          -8.09133005e-03,  -6.51702876e-03,  -4.93728578e-03],
@@ -529,7 +529,7 @@ def test_ind(args, M = None, fig = None, axes = None):
          -6.12007600e-03,   8.28325267e-04,  -1.55554040e-03,
           1.45690859e-03,  -7.91701907e-03,  -7.56270122e-03]])
 
-    M = np.array([[ -9.34913387e-03,  -6.43812543e-04,  -2.02307346e-03,
+        M = np.array([[ -9.34913387e-03,  -6.43812543e-04,  -2.02307346e-03,
          -3.29209451e-03,  -2.26458692e-03,  -1.40680326e-03,
           9.38356454e-04,   8.74187719e-03,   9.65564865e-03,
           4.52953837e-03,   7.02029383e-03,   5.35614425e-03],
@@ -566,8 +566,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   1.91033627e-03]])
 
-    # g10, sortidx 4
-    M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
+        # g10, sortidx 4
+        M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
           9.18686839e-03,   8.64899165e-03,  -3.58777243e-04,
          -7.34734323e-03,   6.97727050e-03,   6.09601684e-03,
           4.64475945e-03,   3.67067992e-03,   4.17803956e-03],
@@ -604,8 +604,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -7.91358133e-03,  -8.08997428e-03,  -4.15678195e-03,
           5.55109503e-03,  -1.09409937e-03,   4.55191598e-03]])
 
-    # g11, si 0
-    M = np.array([[ -9.34913387e-03,  -6.43812543e-04,  -2.02307346e-03,
+        # g11, si 0
+        M = np.array([[ -9.34913387e-03,  -6.43812543e-04,  -2.02307346e-03,
           2.77291304e-01,  -2.26458692e-03,  -1.40680326e-03,
           9.38356454e-04,   8.74187719e-03,   9.65564865e-03,
           4.52953837e-03,   7.02029383e-03,   5.35614425e-03],
@@ -642,8 +642,8 @@ def test_ind(args, M = None, fig = None, axes = None):
           4.06199334e-03,   2.20667585e-03,  -3.93073023e-04,
          -6.54898366e-03,   9.23640066e-03,   2.29411501e-03]])
 
-    # g11, si 1
-    M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
+        # g11, si 1
+        M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
           9.18686839e-03,   8.64899165e-03,  -3.58777243e-04,
          -7.34734323e-03,   6.97727050e-03,   6.09601684e-03,
           4.64475945e-03,   3.67067992e-03,   4.17803956e-03],
@@ -680,8 +680,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -7.91358133e-03,  -8.08997428e-03,  -4.15678195e-03,
           5.55109503e-03,  -1.09409937e-03,   4.55191598e-03]])
 
-    # g11, si 4
-    M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
+        # g11, si 4
+        M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
           9.18686839e-03,   8.64899165e-03,  -3.58777243e-04,
          -7.34734323e-03,   6.97727050e-03,   6.09601684e-03,
           4.64475945e-03,   3.67067992e-03,   4.17803956e-03],
@@ -718,8 +718,8 @@ def test_ind(args, M = None, fig = None, axes = None):
           4.06199334e-03,   2.20667585e-03,  -3.93073023e-04,
          -6.54898366e-03,   9.23640066e-03,   2.29411501e-03]])
 
-    # g12, si 2
-    M = np.array([[ -4.41394589e-03,   2.84829159e-03,  -8.59658701e-01,
+        # g12, si 2
+        M = np.array([[ -4.41394589e-03,   2.84829159e-03,  -8.59658701e-01,
          -5.17653243e-03,   5.45606876e-04,   7.54417550e-03,
           4.82357605e-03,  -3.57799932e-03,   5.41876366e-03,
          -2.11199188e+00,   7.02029383e-03,   5.35614425e-03],
@@ -756,8 +756,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -7.91358133e-03,   8.42187747e-04,   7.28503291e-03,
           9.18224900e-03,   4.25884031e-03,   9.96466699e-03]])
 
-    # g13, si0
-    M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
+        # g13, si0
+        M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
           9.18686839e-03,   8.64899165e-03,  -3.58777243e-04,
          -7.34734323e-03,   6.97727050e-03,   6.09601684e-03,
           4.64475945e-03,   3.67067992e-03,   4.17803956e-03],
@@ -794,8 +794,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   4.55191598e-03]])
 
-    # g13, si 2
-    M = np.array([[ -4.41394589e-03,   2.84829159e-03,  -8.59658701e-01,
+        # g13, si 2
+        M = np.array([[ -4.41394589e-03,   2.84829159e-03,  -8.59658701e-01,
          -5.17653243e-03,   5.45606876e-04,   7.54417550e-03,
           4.82357605e-03,  -3.57799932e-03,   5.41876366e-03,
          -7.34570136e-03,  -3.19360457e-03,  -6.20762822e-03],
@@ -832,8 +832,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -6.12007600e-03,   8.28325267e-04,  -1.55554040e-03,
           1.45690859e-03,  -7.91701907e-03,   2.29411501e-03]])
 
-    # g13, si3
-    M = np.array([[ -4.41394589e-03,   2.84829159e-03,  -8.59658701e-01,
+        # g13, si3
+        M = np.array([[ -4.41394589e-03,   2.84829159e-03,  -8.59658701e-01,
          -5.17653243e-03,   5.45606876e-04,   7.54417550e-03,
           4.82357605e-03,  -3.57799932e-03,   5.41876366e-03,
          -7.34570136e-03,  -3.19360457e-03,  -6.20762822e-03],
@@ -870,8 +870,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -7.91358133e-03,   8.42187747e-04,   7.28503291e-03,
           9.18224900e-03,   4.25884031e-03,   9.96466699e-03]])
 
-    # g14, si0
-    M = np.array([[ -4.41394589e-03,   2.84829159e-03,  -8.59658701e-01,
+        # g14, si0
+        M = np.array([[ -4.41394589e-03,   2.84829159e-03,  -8.59658701e-01,
          -5.17653243e-03,   5.45606876e-04,   7.54417550e-03,
           4.82357605e-03,  -3.57799932e-03,   5.41876366e-03,
          -7.34570136e-03,  -3.19360457e-03,  -6.20762822e-03],
@@ -908,8 +908,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -6.12007600e-03,   8.28325267e-04,  -1.55554040e-03,
           1.45690859e-03,  -7.91701907e-03,   2.29411501e-03]])
 
-    # g14, si1
-    M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
+        # g14, si1
+        M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
           9.18686839e-03,   8.64899165e-03,  -3.58777243e-04,
          -7.34734323e-03,   6.97727050e-03,   6.09601684e-03,
           4.64475945e-03,   3.67067992e-03,   4.17803956e-03],
@@ -946,8 +946,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -6.12007600e-03,   8.28325267e-04,  -1.55554040e-03,
           1.45690859e-03,  -7.91701907e-03,   2.29411501e-03]])
 
-    # g14, si2
-    M = np.array([[ -4.41394589e-03,   2.84829159e-03,   5.86625602e-03,
+        # g14, si2
+        M = np.array([[ -4.41394589e-03,   2.84829159e-03,   5.86625602e-03,
          -5.17653243e-03,   5.45606876e-04,   7.54417550e-03,
           4.82357605e-03,  -3.57799932e-03,   5.41876366e-03,
          -7.34570136e-03,  -3.19360457e-03,  -6.20762822e-03],
@@ -984,8 +984,8 @@ def test_ind(args, M = None, fig = None, axes = None):
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   4.55191598e-03]])
 
-    # g14, si3
-    M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
+        # g14, si3
+        M = np.array([[  4.97700771e-03,  -3.02279889e-03,   4.72608328e-03,
           9.18686839e-03,   8.64899165e-03,  -3.58777243e-04,
          -7.34734323e-03,   6.97727050e-03,   6.09601684e-03,
           4.64475945e-03,   3.67067992e-03,   4.17803956e-03],
@@ -1021,7 +1021,6 @@ def test_ind(args, M = None, fig = None, axes = None):
           5.01350521e-03,   8.27008951e-03,  -5.22554447e-03,
          -3.29514054e-03,   9.05320756e-04,   9.57474894e-03,
          -5.34334601e-05,   5.47769576e-03,   4.55191598e-03]])
-    
         
     M = np.array(M)
 
@@ -1053,14 +1052,14 @@ def test_ind(args, M = None, fig = None, axes = None):
     
     Xs_meas = Xs[:,[1,2]]
 
-    # cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau, args.estimator)
-    # # cm  = ComplexityMeasure()
-    # pi  = cm.compute_pi(Xs_meas)
-    # ais  = cm.compute_ais(Xs_meas)
-    # # pi_l  = cm.compute_pi_local(Xs_meas)
+    cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau, args.estimator)
+    # cm  = ComplexityMeasure()
+    pi  = cm.compute_pi(Xs_meas)
+    ais  = cm.compute_ais(Xs_meas)
+    # pi_l  = cm.compute_pi_local(Xs_meas)
 
-    pi = 0
-    ais = 0
+    # pi = 0
+    # ais = 0
     
     # ax1, ax2, ax3, ax4, ax4cb = axes
     ax1, ax4, ax4cb, ax2, ax3 = axes
@@ -1271,11 +1270,28 @@ def objective_double(params, hparams):
 
 def create_args_expr(args):
     # global logging structure: experiment configuration, generation data for all individuals and statistics
-    experiment = {
-        "conf": args,
-        "generations": [],
-        "generations_stats": [],
-    }
+
+    if args.experimentfile is not None:
+        try:
+            experiment = pickle.load(open(args.experimentfile, "rb"))
+            experimentfile_ = args.experimentfile
+            numgenerations_ = args.numgenerations
+            args = experiment["conf"]
+            # set a start generation
+            setattr(experiment["conf"], "startgeneration", len(experiment["generations"]))
+            # transfer the .bin file over to old config
+            setattr(experiment["conf"], "experimentfile", experimentfile_)
+            setattr(experiment["conf"], "numgenerations", numgenerations_)
+            print("Loaded existing experiment with length %d = startgen %d from %s" % (len(experiment["generations"]), args.startgeneration, args.experimentfile))
+        except IOError:
+            print("create_args_expr: error opening file %s" % args.experimentfile)
+            sys.exit(1)
+    else:
+        experiment = {
+            "conf": args,
+            "generations": [],
+            "generations_stats": [],
+        }
 
     # complexity measure
     cm = ComplexityMeasure(args.measure, args.measure_k, args.measure_tau, args.estimator)
@@ -1356,8 +1372,9 @@ def main(args):
     setattr(args, "expsig", time.strftime("%Y%m%d-%H%M%S"))
 
     # data directory for this run
-    setattr(args, "datadir", "ep3/ep3_mode%s_gen%s_meas%s_est%s_k%d_t%d_op_mut%s_%s" % (args.mode, args.generator,
-        args.measure, args.estimator, args.measure_k, args.measure_tau, args.op_mutation, args.expsig))
+    setattr(args, "datadir", "ep3/ep3_mode%s_gen%s_meas%s_est%s_k%d_t%d_op_mut%s_ns%d_ng%d_np%d_%s" % (args.mode, args.generator,
+        args.measure, args.estimator, args.measure_k, args.measure_tau, args.op_mutation, args.numsteps, args.numgenerations,
+        args.numpopulation, args.expsig))
     try:
         print("Creating directory %s" % (args.datadir))
         os.mkdir(args.datadir)
@@ -1367,10 +1384,14 @@ def main(args):
 
     # get additional experiment configuration
     args_expr = create_args_expr(args)
-
+    # args.startgeneration = args_expr[0]["conf"].startgeneration
+    # HACK
+    if args.mode == "es_vanilla" and len(args_expr[0]["generations"]) > 0:
+        args = args_expr[0]["conf"]
+    
     # get plotting configuration
     args_plot = create_args_plot(args)
-    
+        
     # mode dispatch
     if args.mode == "es_vanilla":
         main_es_vanilla(args, args_expr, args_plot)
@@ -1396,6 +1417,11 @@ def main(args):
         np.save("Xs-%s.npy" % args.expsig, Xs)
     elif args.mode == "plot_fitness_stats_experiment":
         plot_fitness_stats_experiment(args)
+    elif args.mode == "plot_fitness_stats_experiments":
+        plot_fitness_stats_experiments(args)
+    else:
+        print("Unknown mode %s" % args.mode)
+        sys.exit(1)
 
 def plot_fitness_stats_experiment(args):
     experiment = pickle.load(open(args.experimentfile, "rb"))
@@ -1414,6 +1440,63 @@ def plot_fitness_stats_experiment(args):
     fig3.show()
 
     plot_fitness_stats(args, experiment, f3ax1)
+    # plot_cl
+
+    args = oldargs
+    fig3.savefig("%s/ep3_mode%s_stats_%s.pdf" % (args.datadir, args.mode, args.expsig), dpi=300, bbox_inches="tight")
+    pl.show()
+    
+def plot_fitness_stats_experiments(args):
+    experiments = []
+    for expr_file in args.experimentfiles[0]:
+        print("expr_file", expr_file)
+        experiments.append(pickle.load(open(expr_file, "rb")))
+    numexperiments = len(experiments)
+    
+    # gs = experiment["generations_stats"]
+
+    # m = np.array([d["avg_fit"] for d in gsdict])
+
+    oldargs = args
+    args = experiments[0]["conf"]
+        
+    # fitness stats
+    fig3 = pl.figure(figsize = (10, 4))
+    fig3.suptitle("%s fitness stats averaged over %d runs" % (args.datadir, len(experiments)))
+    f3ax1 = fig3.add_subplot(111)
+    fig3.show()
+
+    
+    # m = np.array([d["avg_fit"] for d in gsdict])
+    # m = np.zeros(())
+    maxgen = 0
+    for i,expr in enumerate(epxeriments):
+        maxgen = max(0, len(experiments["generations"]))
+
+    avgf = np.zeros((maxgen, ))
+    stdf = np.zeros((maxgen, ))
+    maxf = np.zeros((maxgen, ))
+    minf = np.zeros((maxgen, ))
+    for i,expr in enumerate(epxeriments):
+        for j,gs in enumerate(experiments["generations_stats"]):
+            avgf[j] += gs["avg_fit"]
+            stdf[j] += gs["std_fit"]
+            maxf[j] += gs["max_fit"]
+            minf[j] += gs["min_fit"]
+
+    print("stats", avgf, stdf, maxf, minf)
+
+    f3ax1.clear()
+    f3ax1.plot(minf, "yo", alpha=0.5, label="min")
+    f3ax1.plot(maxf, "ko", alpha=0.5, label="max")
+    f3ax1.plot(avgf, "ro", alpha=0.5, label="avg")
+    f3ax1.plot(avgf + stdf, "go", alpha=0.5, label="+sigma")
+    f3ax1.plot(avgf - stdf, "go", alpha=0.5, label="-sigma")
+    f3ax1.legend()
+    pl.draw()
+    pl.pause(1e-3)
+
+    # plot_fitness_stats(args, experiment, f3ax1)
     # plot_cl
 
     args = oldargs
@@ -1727,20 +1810,26 @@ def main_es_vanilla(args, args_expr, args_plot):
             
     # array of parameter ndarray for the current generation
     newgen = []
-    for j in range(args.numpopulation):
-        n, p, tau = get_generator_params(args)
-        # print("p.shape", p.shape)
-        # n = Genet(2, 2)
-        # newgen.append(n.M)
-        # n = GenetPlast(2, 2)
-        # newgen.append(n.networks["slow"]["M"])
-        newgen.append(p)
+    if len(experiment["generations"]) > 0:
+        for k,v in experiment["generations"][-1].items():
+            newgen.append(v["M"])
+
+    else:
+        for j in range(args.numpopulation):
+            n, p, tau = get_generator_params(args)
+            # print("p.shape", p.shape)
+            # n = Genet(2, 2)
+            # newgen.append(n.M)
+            # n = GenetPlast(2, 2)
+            # newgen.append(n.networks["slow"]["M"])
+            newgen.append(p)
 
     # plotting
     # ...
                 
     # loop over generations
-    for k in range(args.numgenerations + 1):
+    for k in range(args.startgeneration, args.numgenerations + 1):
+        print("gen %d, start at %d, go to %d" % (k, args.startgeneration, args.numgenerations))
         # arrays of individuals each element of which is
         population = dict()
 
@@ -1896,7 +1985,10 @@ if __name__ == "__main__":
                         help="Mutation operator noise type [pareto]")
     parser.add_argument("-e", "--estimator", type=str, default="kraskov1",
                         help="Type of estimator to use with JIDT [kraskov1].")
-    parser.add_argument("-ef", "--experimentfile", type=str, default="epxeriment.bin",
+    parser.add_argument('-efs', "--experimentfiles", action='append', dest='experimentfiles',
+                        default=[], nargs = "+",
+                        help='Add several experimentfiles',)
+    parser.add_argument("-ef", "--experimentfile", type=str, default=None,
                         help="If mode is plot_fitness_stats_experiment, which datafile to load [experiment.bin].")
     parser.add_argument("-g", "--generator", type=str, default="basic",
                         help="Type of generator [basic]. This is the structure whose parameters we want to evolve.")
@@ -1920,6 +2012,8 @@ if __name__ == "__main__":
                         help="How many individuals to plot [5]")
     parser.add_argument("-ng", "--numgenerations", type=int, default=100,
                         help="number of generations to evolve for [100]")
+    parser.add_argument("-sg", "--startgeneration", type=int, default=0,
+                        help="Init evolution at generation #, to resume interrupted runs or extend the experiment [0]")
     parser.add_argument("-np", "--numpopulation", type=int, default=20,
                         help="number of individuals in population [20]")
     parser.add_argument('-ps', "--plotsave", action='store_true', help='Save plot to pdf?')
