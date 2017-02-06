@@ -1468,7 +1468,7 @@ def plot_fitness_stats_experiments(args):
     # fitness stats
     fig3 = pl.figure(figsize = (10, 4))
     # fig3.suptitle("%s fitness stats averaged over %d runs" % (args.datadir, len(experiments), maxgen))
-    fig3.suptitle("Fitness moments averaged over %d runs for %d generations" % (args.datadir, len(experiments, maxgen)), fontsize=10)
+    fig3.suptitle("Fitness moments averaged over %d runs for %d generations" % (args.datadir, len(experiments), maxgen), fontsize=10)
     f3ax1 = fig3.add_subplot(111)
     fig3.show()
 
