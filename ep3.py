@@ -1470,19 +1470,24 @@ def plot_fitness_stats_experiments(args):
     # m = np.array([d["avg_fit"] for d in gsdict])
     # m = np.zeros(())
     maxgen = 0
-    for i,expr in enumerate(epxeriments):
-        maxgen = max(0, len(experiments["generations"]))
+    for i,expr in enumerate(experiments):
+        maxgen = max(0, len(expr["generations"]))
 
     avgf = np.zeros((maxgen, ))
     stdf = np.zeros((maxgen, ))
     maxf = np.zeros((maxgen, ))
     minf = np.zeros((maxgen, ))
-    for i,expr in enumerate(epxeriments):
-        for j,gs in enumerate(experiments["generations_stats"]):
+    for i,expr in enumerate(experiments):
+        for j,gs in enumerate(expr["generations_stats"]):
             avgf[j] += gs["avg_fit"]
             stdf[j] += gs["std_fit"]
             maxf[j] += gs["max_fit"]
             minf[j] += gs["min_fit"]
+
+    avgf /= float(numexperiments)
+    stdf /= float(numexperiments)
+    maxf /= float(numexperiments)
+    minf /= float(numexperiments)
 
     print("stats", avgf, stdf, maxf, minf)
 
