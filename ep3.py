@@ -1622,6 +1622,9 @@ def main_hp(args, args_expr, args_plot):
             # plot status
             plot_status(args, i, experiment, fig1, fig1axes, fig3)
         
+        if i % 10 == 0:
+            pickle.dump(experiment, open("%s/ep3_experiment_%s.bin" % (args.datadir, args.expsig), "wb"))
+            
     # print("trials.trials = %s" % (trials.trials[0].keys()))
     # print("trials.results = %s" % (trials.results))
 
@@ -1754,9 +1757,9 @@ def plot_fitness_stats(args, experiment, f3ax1):
     f3ax1.clear()
     f3ax1.plot(minf, "yo", alpha=0.5, label="min")
     f3ax1.plot(maxf, "ko", alpha=0.5, label="max")
-    f3ax1.plot(avgf, "ro", alpha=0.5, label="avg")
     f3ax1.plot(avgf + stdf, "go", alpha=0.5, label="+sigma")
     f3ax1.plot(avgf - stdf, "go", alpha=0.5, label="-sigma")
+    f3ax1.plot(avgf, "ro", alpha=0.5, label="avg")
     f3ax1.legend()
     f3ax1.set_xlabel("Generation [k]")
     f3ax1.set_ylabel("Empirical pred. inf. [nats]")
