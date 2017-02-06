@@ -1351,7 +1351,7 @@ def create_args_plot(args):
     fig2.show()
 
     # fitness stats
-    fig3 = pl.figure(figsize = (10, 6))
+    fig3 = pl.figure(figsize = (10, 4))
     fig3.suptitle("%s fitness stats" % (args.datadir))
     f3ax1 = fig3.add_subplot(111)
     fig3.show()
@@ -1680,7 +1680,8 @@ def save_topinds(topinds, args, generation_cnt = 0):
     # fig1.suptitle("%s @generation[%d] x/y" % (args.datadir, generation_cnt))
     fig2 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
     # fig2.suptitle("%s @generation[%d] params" % (args.datadir, generation_cnt))
-    fig3 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
+    # fig3 = pl.figure(figsize = (5*200.0/100.0, 300.0/100.0))
+    fig3 = pl.figure(figsize = (10, 4))
     # fig.show()
     gs1 = gridspec.GridSpec(1, len(topinds) * 1)
     gs2 = gridspec.GridSpec(2, len(topinds) * 1, height_ratios = [0.95, 0.05]) # + 1, width_ratios = [1] * len(topinds) + [0.1])
