@@ -1581,7 +1581,8 @@ def main_hp(args, args_expr, args_plot):
     initevals = 0
     maxevals = args.numgenerations # 500
     lrstate = np.random.RandomState(123)
-    
+
+    minloss = 0
     for i in range(initevals, maxevals):
         bests.append(fmin(objective_hp,
                     space,
@@ -1602,12 +1603,14 @@ def main_hp(args, args_expr, args_plot):
             "min_fit": np.min(ind_loss),
         }
         experiment["generations_stats"].append(generation_stats)
+
+        minloss = min(0, trials.losses()[-1])
         
         # plot fitness stats for generation k
         plot_fitness_stats(args, experiment, f3ax1)
 
         if i >= args.numpopulation:
-            print("trials.losses() = %s" % (trials.losses()))
+            # print("trials.losses() = %s" % (trials.losses()))
             population = dict()
             si = np.argsort(np.array(trials.losses()))
             for j in range(args.numpopulation):
@@ -1624,7 +1627,8 @@ def main_hp(args, args_expr, args_plot):
         
         if i % 10 == 0:
             pickle.dump(experiment, open("%s/ep3_experiment_%s.bin" % (args.datadir, args.expsig), "wb"))
-            
+
+        print("gen%04d min loss = %f" % (i, minloss))
     # print("trials.trials = %s" % (trials.trials[0].keys()))
     # print("trials.results = %s" % (trials.results))
 
