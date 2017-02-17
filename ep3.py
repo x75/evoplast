@@ -47,13 +47,45 @@ except ImportError:
 
 from jpype import startJVM, isJVMStarted, getDefaultJVMPath, JPackage, shutdownJVM, JArray, JDouble, attachThreadToJVM
 
-from smp.infth import init_jpype # , ComplexityMeas
-from smp.smp_plot import put_legend_out_right, put_legend_out_top
+# from smp.infth import init_jpype # , ComplexityMeas
+# from smp.smp_plot import put_legend_out_right, put_legend_out_top
 
 from ep4 import Genet, GenetPlast
 
 # note to self: make easy wrapper for robotics / ML applications
 # variants: k, tau, global/local
+
+# from smp/infth.py
+def init_jpype(jarloc = None):
+    if jarloc is None:
+        jarLocation = "/home/src/QK/infodynamics-dist/infodynamics.jar"
+    else:
+        jarLocation = jarloc
+        print("infth: Set jidt jar location to %s" % jarLocation)
+        
+    # startJVM(getDefaultJVMPath(), "-ea", "-Xmx2048M", "-Djava.class.path=" + jarLocation)
+    if not isJVMStarted():
+        print("Starting JVM")
+        startJVM(getDefaultJVMPath(), "-ea", "-Xmx8192M", "-Djava.class.path=" + jarLocation)
+    else:
+        print("Attaching JVM")
+        attachThreadToJVM()
+
+# from smp/smp_plot.py
+def put_legend_out_right(labels = None, resize_by = 0.8):
+    resize_panel_vert(resize_by = resize_by)
+    if not labels is None:
+        pl.legend(labels, loc="center left", bbox_to_anchor=(1.0, 0.5), ncol=1, fontsize=8)
+    else:
+        pl.legend(loc="center left", bbox_to_anchor=(1.0, 0.5), ncol=1, fontsize=8)
+
+def put_legend_out_top(labels = None, resize_by = 0.8):
+    box = pl.gca().get_position()
+    pl.gca().set_position([box.x0, box.y0, box.width, box.height * resize_by])
+    if not labels is None:
+        pl.legend(labels, loc="center left", bbox_to_anchor=(1.0, 0.5), ncol=1, fontsize=8)
+    else:
+        pl.legend(loc="upper center", bbox_to_anchor=(0.5, 1.2), ncol=10, fontsize=8)        
 
 # from lmjohns3:kohonen/kohonen/kohonen.py
 def argsample(pdf, n=1):
